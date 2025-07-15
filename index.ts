@@ -11,12 +11,13 @@ import { createLogger } from "./logger";
 
 const logger = createLogger({ crawlerType: "main" });
 
+// for gist, we leave only info required by plugin,
+// some additional data is saved only in artifacts for debugging
 function createLightweightVersion(
   processedRepositories: ProcessedRepositories,
 ): unknown {
   const lightweightItems = processedRepositories.items.map((repo) => {
     const {
-      full_name,
       topics,
       stargazers_count,
       forks_count,
