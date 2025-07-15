@@ -67,7 +67,7 @@ async function main() {
 
   if (config.UPDATE_FS) {
     writeFileSync(
-      "crawler_results.json",
+      config.OUTPUT_FILENAME,
       JSON.stringify(processedRepositories, null, 2),
     );
     logger.info("Results written to crawler_results.json");
