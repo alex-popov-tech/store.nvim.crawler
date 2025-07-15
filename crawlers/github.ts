@@ -41,7 +41,8 @@ export async function crawlGithub() {
   const allRepos = [];
   const perPage = 100;
   const startYear = 2014;
-  const endYear = new Date().getFullYear();
+  // const endYear = new Date().getFullYear();
+  const endYear = 2015;
 
   logger.info(
     `Searching repositories with topic "neovim-plugin" from ${startYear} to ${endYear}`,
