@@ -66,12 +66,14 @@ export function processRepositories(
       homepage: repo.homepage ?? "",
 
       topics: repo.topics,
-      tags: repo.topics.filter((topic) => {
-        const lowerTopic = topic.toLowerCase();
-        return !BLACKLISTED_TAGS.some((blacklistedWord) =>
-          lowerTopic.includes(blacklistedWord),
-        );
-      }).sort((a, b) => a.localeCompare(b)),
+      tags: repo.topics
+        .filter((topic) => {
+          const lowerTopic = topic.toLowerCase();
+          return !BLACKLISTED_TAGS.some((blacklistedWord) =>
+            lowerTopic.includes(blacklistedWord),
+          );
+        })
+        .sort((a, b) => a.localeCompare(b)),
 
       stargazers_count: repo.stargazers_count,
       pretty_stargazers_count: formatNumber(repo.stargazers_count),
