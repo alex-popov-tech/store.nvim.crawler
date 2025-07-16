@@ -18,13 +18,14 @@ export type RepositoryInfo = {
   forks_count: number;
   pretty_forks_count: string;
 
-  pushed_at: string;
+  pushed_at: number;
   pretty_pushed_at: string;
 };
 
 export type ProcessedRepositories = {
   meta: {
     total_count: number;
+    crawled_at: number;
     max_full_name_length: number;
     max_pretty_stargazers_length: number;
     max_pretty_forks_length: number;
