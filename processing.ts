@@ -71,7 +71,7 @@ export function processRepositories(
         return !BLACKLISTED_TAGS.some((blacklistedWord) =>
           lowerTopic.includes(blacklistedWord),
         );
-      }),
+      }).sort((a, b) => a.localeCompare(b)),
 
       stargazers_count: repo.stargazers_count,
       pretty_stargazers_count: formatNumber(repo.stargazers_count),
