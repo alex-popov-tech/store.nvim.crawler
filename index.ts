@@ -19,10 +19,8 @@ function createLightweightVersion(
   const lightweightItems = processedRepositories.items.map((repo) => {
     const {
       topics,
-      stargazers_count,
       forks_count,
       open_issues_count,
-      pushed_at,
       ...lightweightRepo
     } = repo;
     return lightweightRepo;
