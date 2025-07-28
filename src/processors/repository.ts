@@ -1,7 +1,6 @@
-import { GithubRepository } from "./github-client";
-import { ProcessedRepositories } from "./types";
-
-const BLACKLISTED_TAGS = ["neovim", "nvim", "vim", "lua", "plugin"];
+import { GithubRepository } from "~/sdk/github";
+import { ProcessedRepositories, RepositoryInfo } from "~/types";
+import { config } from "~/config";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -42,22 +41,23 @@ function formatRelativeTime(dateString: string): string {
 export function processRepositories(
   repositories: GithubRepository[],
 ): ProcessedRepositories {
-  // Initialize max length tracking
-  const crawledAtUnix = Math.floor(Date.now() / 1000);
-  const meta = {
-    total_count: repositories.length,
-    crawled_at: crawledAtUnix,
-    max_full_name_length: 0,
-    max_pretty_stargazers_length: 0,
-    max_pretty_forks_length: 0,
-    max_pretty_issues_length: 0,
-    max_pretty_pushed_at_length: 0,
-  };
+  const processedRepositories = {
+    meta: {
+      total_count: repositories.length,
+      crawled_at: Math.floor(Date.now() / 1000),
+      max_full_name_length: 0,
+      max_pretty_stargazers_length: 0,
+      max_pretty_forks_length: 0,
+      max_pretty_issues_length: 0,
+      max_pretty_pushed_at_length: 0,
+    },
+    items: [],
+  } as ProcessedRepositories;
 
-  const processedItems = repositories.map((repo) => {
+  for (const repo of repositories) {
     const [author, name] = repo.full_name.split("/");
     const pushedAtUnix = Math.floor(new Date(repo.pushed_at).getTime() / 1000);
-    const res = {
+    const item: RepositoryInfo = {
       full_name: repo.full_name,
       author: author || "",
       name: name || "",
@@ -69,11 +69,13 @@ export function processRepositories(
       tags: repo.topics
         .filter((topic) => {
           const lowerTopic = topic.toLowerCase();
-          return !BLACKLISTED_TAGS.some((blacklistedWord) =>
+          return !config.TAGS_BLACKLIST.some((blacklistedWord) =>
             lowerTopic.includes(blacklistedWord),
           );
         })
         .sort((a, b) => a.localeCompare(b)),
+
+      installationConfig: "", // will be updated later
 
       stargazers_count: repo.stargazers_count,
       pretty_stargazers_count: formatNumber(repo.stargazers_count),
@@ -89,29 +91,28 @@ export function processRepositories(
     };
 
     // Track maximum lengths
-    meta.max_full_name_length = Math.max(
-      meta.max_full_name_length,
-      res.full_name.length,
+    processedRepositories.meta.max_full_name_length = Math.max(
+      processedRepositories.meta.max_full_name_length,
+      item.full_name.length,
     );
-    meta.max_pretty_stargazers_length = Math.max(
-      meta.max_pretty_stargazers_length,
-      res.pretty_stargazers_count.length,
+    processedRepositories.meta.max_pretty_stargazers_length = Math.max(
+      processedRepositories.meta.max_pretty_stargazers_length,
+      item.pretty_stargazers_count.length,
     );
-    meta.max_pretty_forks_length = Math.max(
-      meta.max_pretty_forks_length,
-      res.pretty_forks_count.length,
+    processedRepositories.meta.max_pretty_forks_length = Math.max(
+      processedRepositories.meta.max_pretty_forks_length,
+      item.pretty_forks_count.length,
     );
-    meta.max_pretty_issues_length = Math.max(
-      meta.max_pretty_issues_length,
-      res.pretty_open_issues_count.length,
+    processedRepositories.meta.max_pretty_issues_length = Math.max(
+      processedRepositories.meta.max_pretty_issues_length,
+      item.pretty_open_issues_count.length,
     );
-    meta.max_pretty_pushed_at_length = Math.max(
-      meta.max_pretty_pushed_at_length,
-      res.pretty_pushed_at.length,
+    processedRepositories.meta.max_pretty_pushed_at_length = Math.max(
+      processedRepositories.meta.max_pretty_pushed_at_length,
+      item.pretty_pushed_at.length,
     );
+    processedRepositories.items.push(item);
+  }
 
-    return res;
-  });
-
-  return { meta, items: processedItems };
+  return processedRepositories;
 }

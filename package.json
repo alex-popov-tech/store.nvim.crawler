@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Repositories crawler for store.nvim",
   "scripts": {
+    "start": "tsx cmd/crawl.ts",
     "compile": "tsc --noEmit"
   },
   "repository": {
@@ -27,7 +28,10 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@types/luaparse": "^0.2.12",
     "axios": "^1.10.0",
-    "envalid": "^8.1.0"
+    "envalid": "^8.1.0",
+    "lua-fmt": "^2.6.0",
+    "luaparse": "^0.3.1"
   }
 }

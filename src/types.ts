@@ -5,6 +5,7 @@ export type RepositoryInfo = {
   html_url: string;
   description: string;
   homepage: string;
+  installationConfig: string;
 
   topics: string[];
   tags: string[];

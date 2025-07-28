@@ -1,4 +1,4 @@
-import { getRepositoryReadme } from "../github-client";
+import { getRepositoryReadme } from "../sdk/github";
 import { createLogger } from "../logger";
 
 type ParsedRepo = {
@@ -7,7 +7,7 @@ type ParsedRepo = {
 };
 
 const AWESOME_NEOVIM_REPO = "rockerBOO/awesome-neovim";
-const logger = createLogger({ crawlerType: "awesome neovim crawler" });
+const logger = createLogger({ context: "awesome neovim crawler" });
 
 function parseAwesomeNvimReadme(readmeContent: string) {
   const githubUrlRegex =
@@ -102,7 +102,7 @@ function parseAwesomeNvimReadme(readmeContent: string) {
 }
 
 export async function crawlAwesomeNvim() {
-  logger.processStart("awesome-neovim crawler");
+  logger.info("Starting: awesome-neovim crawler");
 
   const readmeResult = await getRepositoryReadme(AWESOME_NEOVIM_REPO);
   if (readmeResult.error) {
@@ -112,8 +112,8 @@ export async function crawlAwesomeNvim() {
 
   const repos = parseAwesomeNvimReadme(readmeResult.data!);
 
-  logger.processEnd(
-    `Crawling completed successfully! Total repositories discovered: ${repos.size}`,
+  logger.info(
+    `awesome-neovim crawler completed! Found ${repos.size} repositories`,
   );
 
   return { data: repos, error: null };

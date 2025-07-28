@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 jobs:
   crawl:
-    name: Crawl awesome-neovim repositories
+    name: Crawl nvim plugin repositories
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -19,16 +19,18 @@ jobs:
         run: npm install
       - name: Run crawler
         env:
+          LOG_LEVEL: debug
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
-          GIST_ID: ${{ vars.GIST_ID }}
-          OUTPUT_FILENAME: ${{ vars.OUTPUT_FILENAME }}
-          UPDATE_GIST: ${{ vars.UPDATE_GIST }}
-          UPDATE_FS: ${{ vars.UPDATE_FS }}
-        run: npx tsx index.ts
+          UPDATE_GIST_ID: ${{ vars.GIST_ID }}
+        run: npm run start 2>&1 | tee crawler.log
       - name: Upload crawl results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: crawler-results
-          path: ${{ vars.OUTPUT_FILENAME }}
+          path: |
+            db.json
+            install.json
+            db_minified.json
+            crawler.log
           retention-days: 3
