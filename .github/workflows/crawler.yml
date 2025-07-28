@@ -21,7 +21,7 @@ jobs:
         env:
           LOG_LEVEL: debug
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
-          UPDATE_GIST_ID: ${{ vars.GIST_ID }}
+          UPDATE_GIST_ID: ${{ vars.UPDATE_GIST_ID }}
         run: npm run start 2>&1 | tee crawler.log
       - name: Upload crawl results
         uses: actions/upload-artifact@v4
