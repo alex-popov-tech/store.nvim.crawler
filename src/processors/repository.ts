@@ -64,6 +64,7 @@ export function processRepositories(
       html_url: repo.html_url,
       description: repo.description ?? "",
       homepage: repo.homepage ?? "",
+      created_at: Math.floor(new Date(repo.created_at).getTime() / 1000),
 
       topics: repo.topics,
       tags: repo.topics

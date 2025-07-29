@@ -30,14 +30,15 @@ export const config = {
     (rn) => rn.includes("LazyVim"),
     (rn) => rn.includes("kickstart"),
     (rn) => rn.includes("chaivim"),
+    (rn) => rn.includes("NvChad"),
   ] as ((repoName: string) => boolean)[],
 
   TAGS_BLACKLIST: ["neovim", "nvim", "vim", "lua", "plugin"],
 
   cutter: {
     // max amount of context lines to be included in each chunk
-    contextLinesBefore: 6,
-    contextLinesAfter: 6,
+    contextLinesBefore: 3,
+    contextLinesAfter: 3,
   },
 
   crawler: {

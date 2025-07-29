@@ -165,7 +165,7 @@ async function updateGistDb(content: string) {
   logger.info("🌐 Starting: GitHub Gist Update");
 
   const gistResult = await updateGist(config.UPDATE_GIST_ID, {
-    files: { "db.json": { content } },
+    files: { [config.output.minifiedDb]: { content } },
   });
 
   if (gistResult.error) {
@@ -242,6 +242,38 @@ async function main() {
       repo.installationConfig = vimPlug.formatted;
     }
   }
+
+  // Apply natural filtering: prioritize recently updated plugins and those with installation instructions
+  db.items.sort((a, b) => {
+    // Primary: Recently updated (within 30 days gets boost)
+    const now = Math.floor(Date.now() / 1000);
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
+    
+    const aIsRecent = a.pushed_at > thirtyDaysAgo;
+    const bIsRecent = b.pushed_at > thirtyDaysAgo;
+    
+    if (aIsRecent !== bIsRecent) {
+      return bIsRecent ? 1 : -1; // Recent repos first
+    }
+    
+    // Secondary: Has installation instructions
+    const aHasInstall = a.installationConfig.length > 0;
+    const bHasInstall = b.installationConfig.length > 0;
+    
+    if (aHasInstall !== bHasInstall) {
+      return bHasInstall ? 1 : -1; // Repos with install instructions first
+    }
+    
+    // Tertiary: pushed_at timestamp (recent first)
+    if (a.pushed_at !== b.pushed_at) {
+      return b.pushed_at - a.pushed_at;
+    }
+    
+    // Final: star count (higher first)
+    return b.stargazers_count - a.stargazers_count;
+  });
+  
+  logger.info("✅ Applied natural filtering - prioritized recent updates and proper installation instructions");
 
   const minifiedDb = compressDb(db);
 

@@ -9,6 +9,7 @@ export type SearchOptions = {
 };
 
 export type GithubRepository = {
+  created_at: string;
   full_name: string;
   description: string | null;
   homepage: string | null;
@@ -136,7 +137,7 @@ export async function searchRepositories(
   page: number,
   perPage: number = 100,
   options: SearchOptions,
-) {
+): Promise<{ data: GithubSearchRepositories } | { error: any }> {
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
   let query = `topic:${options.topic}`;
@@ -175,7 +176,7 @@ export async function searchRepositories(
     logger.info(
       `Success - got ${response.data.items.length} items, total_count: ${response.data.total_count}`,
     );
-    return { data: response.data, error: null };
+    return { data: response.data };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
@@ -198,7 +199,7 @@ export async function searchRepositories(
       }
     }
 
-    return { data: null, error };
+    return { error };
   }
 }
 
