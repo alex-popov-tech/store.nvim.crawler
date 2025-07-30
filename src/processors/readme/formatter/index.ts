@@ -15,7 +15,10 @@ type FormatResult =
       error: string;
     };
 
-function formatChunks(chunks: MigratedChunk[], repositoryFullName: string): FormattedChunk[] {
+function formatChunks(
+  chunks: MigratedChunk[],
+  repositoryFullName: string,
+): FormattedChunk[] {
   const formattedChunks: FormattedChunk[] = [];
 
   for (const chunk of chunks) {
@@ -34,7 +37,9 @@ function formatChunks(chunks: MigratedChunk[], repositoryFullName: string): Form
         formatted: result.formatted,
       });
     } else {
-      logger.debug(`[${repositoryFullName}] Failed to format chunk: ${result.error}`);
+      logger.debug(
+        `[${repositoryFullName}] Failed to format chunk: ${result.error}`,
+      );
     }
   }
 
@@ -61,7 +66,7 @@ function formatLuaCode(code: string): FormatResult {
     const formatted = formatText(wrappedCode);
 
     // Remove the "return " prefix after formatting
-    const finalFormatted = formatted.replace(/^return\s+/, "");
+    const finalFormatted = formatted.replace(/^return\s+/, "").trim();
 
     return {
       success: true,
