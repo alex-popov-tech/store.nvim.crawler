@@ -1,4 +1,5 @@
-import { Chunk, RatedChunk, PluginManager, Verdict } from "../types";
+import { PluginManager } from "~/types";
+import { Chunk, RatedChunk, Verdict } from "../types";
 import { lazyTokens } from "./lazy";
 import { packerTokens } from "./packer";
 import { TokenMatcher } from "./types";

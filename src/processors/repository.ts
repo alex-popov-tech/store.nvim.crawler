@@ -76,8 +76,6 @@ export function processRepositories(
         })
         .sort((a, b) => a.localeCompare(b)),
 
-      installationConfig: "", // will be updated later
-
       stargazers_count: repo.stargazers_count,
       pretty_stargazers_count: formatNumber(repo.stargazers_count),
 

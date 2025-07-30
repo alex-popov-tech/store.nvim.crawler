@@ -1,4 +1,4 @@
-export type PluginManager = "lazy.nvim" | "packer.nvim" | "vim-plug";
+import { PluginManager } from "~/types";
 
 export type Verdict = "high" | "medium" | "low";
 

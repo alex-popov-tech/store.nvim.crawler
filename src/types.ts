@@ -1,3 +1,5 @@
+export type PluginManager = "lazy.nvim" | "packer.nvim" | "vim-plug";
+
 export type RepositoryInfo = {
   full_name: string;
   author: string;
@@ -7,7 +9,10 @@ export type RepositoryInfo = {
   homepage: string;
   created_at: number;
 
-  installationConfig: string;
+  install?: {
+    initial: PluginManager;
+    lazyConfig: string;
+  };
 
   topics: string[];
   tags: string[];

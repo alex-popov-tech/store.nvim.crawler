@@ -126,6 +126,67 @@ async function generateInstallationInstructions(
 }
 
 /**
+ * Step 3a: Apply installation configurations to repositories
+ */
+function applyInstallationConfigs(
+  repositories: ProcessedRepositories,
+  installationData: Record<string, FormattedChunk[]>,
+): void {
+  for (const repo of repositories.items) {
+    const options = installationData[repo.full_name];
+    if (!options?.length) {
+      continue;
+    }
+    const lazy = options.find((option) => option.pluginManager === "lazy.nvim");
+    const packer = options.find(
+      (option) => option.pluginManager === "packer.nvim",
+    );
+    const vimPlug = options.find(
+      (option) => option.pluginManager === "vim-plug",
+    );
+    if (lazy) {
+      repo.install = {
+        initial: "lazy.nvim",
+        lazyConfig: lazy.formatted,
+      };
+    } else if (packer) {
+      repo.install = {
+        initial: "packer.nvim",
+        lazyConfig: packer.formatted,
+      };
+    } else if (vimPlug) {
+      repo.install = {
+        initial: "vim-plug",
+        lazyConfig: vimPlug.formatted,
+      };
+    }
+  }
+}
+
+/**
+ * Sort repositories by installation status and recency
+ */
+function sortRepositories(repositories: ProcessedRepositories): void {
+  repositories.items.sort((a, b) => {
+    // Primary: Has installation instructions (with instructions first)
+    const aHasInstall = a.install && a.install!.lazyConfig.length > 0;
+    const bHasInstall = b.install && b.install!.lazyConfig.length > 0;
+
+    if (aHasInstall !== bHasInstall) {
+      return bHasInstall ? 1 : -1; // Repos with install instructions first
+    }
+
+    // Secondary: pushed_at timestamp (most recent first within each group)
+    if (a.pushed_at !== b.pushed_at) {
+      return b.pushed_at - a.pushed_at;
+    }
+
+    // Final: star count (higher first)
+    return b.stargazers_count - a.stargazers_count;
+  });
+}
+
+/**
  * Step 4: Save separate json's for plugins info, and readme's processing results
  */
 function saveToFilesystem(args: {
@@ -222,58 +283,14 @@ async function main() {
   }
   const { data: install } = installResult;
 
-  for (const repo of db.items) {
-    const options = installResult.data[repo.full_name];
-    if (!options?.length) {
-      continue;
-    }
-    const lazy = options.find((option) => option.pluginManager === "lazy.nvim");
-    const packer = options.find(
-      (option) => option.pluginManager === "packer.nvim",
-    );
-    const vimPlug = options.find(
-      (option) => option.pluginManager === "vim-plug",
-    );
-    if (lazy) {
-      repo.installationConfig = lazy.formatted;
-    } else if (packer) {
-      repo.installationConfig = packer.formatted;
-    } else if (vimPlug) {
-      repo.installationConfig = vimPlug.formatted;
-    }
-  }
+  // Step 3a: Apply installation configurations to repositories
+  applyInstallationConfigs(db, install);
 
-  // Apply natural filtering: prioritize recently updated plugins and those with installation instructions
-  db.items.sort((a, b) => {
-    // Primary: Recently updated (within 30 days gets boost)
-    const now = Math.floor(Date.now() / 1000);
-    const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
-    
-    const aIsRecent = a.pushed_at > thirtyDaysAgo;
-    const bIsRecent = b.pushed_at > thirtyDaysAgo;
-    
-    if (aIsRecent !== bIsRecent) {
-      return bIsRecent ? 1 : -1; // Recent repos first
-    }
-    
-    // Secondary: Has installation instructions
-    const aHasInstall = a.installationConfig.length > 0;
-    const bHasInstall = b.installationConfig.length > 0;
-    
-    if (aHasInstall !== bHasInstall) {
-      return bHasInstall ? 1 : -1; // Repos with install instructions first
-    }
-    
-    // Tertiary: pushed_at timestamp (recent first)
-    if (a.pushed_at !== b.pushed_at) {
-      return b.pushed_at - a.pushed_at;
-    }
-    
-    // Final: star count (higher first)
-    return b.stargazers_count - a.stargazers_count;
-  });
-  
-  logger.info("✅ Applied natural filtering - prioritized recent updates and proper installation instructions");
+  // Apply natural filtering: plugins with installations first, then without, both sorted by pushed_at
+  sortRepositories(db);
+  logger.info(
+    "✅ Applied natural filtering - prioritized recent updates and proper installation instructions",
+  );
 
   const minifiedDb = compressDb(db);
 

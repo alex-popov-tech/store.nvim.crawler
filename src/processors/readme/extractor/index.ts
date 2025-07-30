@@ -1,9 +1,10 @@
-import { ExtractedChunk, PluginManager, RatedChunk } from "../types";
+import { ExtractedChunk, RatedChunk } from "../types";
 import { extractFromLuaAST } from "./luaparse";
 import { matchers as packerMatchers } from "./packer";
 import { matchers as lazyMatchers } from "./lazy";
 import { extractFromVimPlug } from "./vim-plug";
 import { createLogger } from "../../../logger";
+import { PluginManager } from "~/types";
 
 const logger = createLogger({ context: "extractor" });
 
