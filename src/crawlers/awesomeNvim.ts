@@ -174,11 +174,6 @@ export async function crawlAwesomeNvim(): Promise<
       // At this point, result.data is guaranteed to be valid
       const repo = result.data;
 
-      if (result.data.archived) {
-        logger.warn(`Repository ${repoName} is archieved`);
-        return null;
-      }
-
       // Check if repository topics include 'neovim' or 'nvim'
       const isNvimPlugin = repo.topics.some(
         (topic) =>

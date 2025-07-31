@@ -1,4 +1,5 @@
 import { cleanEnv, str, bool } from "envalid";
+import { GithubRepository } from "./sdk";
 
 const env = cleanEnv(process.env, {
   AUTH_TOKEN: str(),
@@ -16,24 +17,27 @@ export const config = {
   REPOSITORIES_BLACKLIST: [
     // random repositories which for some reason have
     // topics like 'neovim-plugin' and get crawled
-    (rn) => rn.trim().endsWith("dotfiles"),
+    (r) => r.full_name.trim().endsWith("dotfiles"),
 
     // plugin managers
-    (rn) => rn.includes("pckr.nvim"),
-    (rn) => rn.includes("lazy.nvim"),
-    (rn) => rn.includes("rocks.nvim"),
-    (rn) => rn.includes("nvim-plug"),
+    (r) => r.full_name.includes("pckr.nvim"),
+    (r) => r.full_name.includes("lazy.nvim"),
+    (r) => r.full_name.includes("rocks.nvim"),
+    (r) => r.full_name.includes("nvim-plug"),
 
     // frameworks
-    (rn) => rn.includes("AstroNvim"),
-    (rn) => rn.includes("CyberNvim"),
-    (rn) => rn.includes("LazyVim"),
-    (rn) => rn.includes("kickstart"),
-    (rn) => rn.includes("chaivim"),
-    (rn) => rn.includes("NvChad"),
-    (rn) => rn.includes("SpaceVim"),
-    (rn) => rn.includes("LunarVim"),
-  ] as ((repoName: string) => boolean)[],
+    (r) => r.full_name.includes("AstroNvim"),
+    (r) => r.full_name.includes("CyberNvim"),
+    (r) => r.full_name.includes("LazyVim"),
+    (r) => r.full_name.includes("kickstart"),
+    (r) => r.full_name.includes("chaivim"),
+    (r) => r.full_name.includes("NvChad"),
+    (r) => r.full_name.includes("SpaceVim"),
+    (r) => r.full_name.includes("LunarVim"),
+
+    // archieved repos
+    (r) => r.archived,
+  ] as ((repoName: GithubRepository) => boolean)[],
 
   TAGS_BLACKLIST: ["neovim", "nvim", "vim", "lua", "plugin"],
 

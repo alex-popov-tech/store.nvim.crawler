@@ -48,7 +48,7 @@ async function crawlTimeRange(
     }
 
     const { items, total_count } = result.data;
-    repos.push(...items.filter((it) => !it.archived));
+    repos.push(...items);
     logger.info(
       `Fetched ${items.length} repos, ${repos.length}/${total_count} total for ${periodLabel}`,
     );

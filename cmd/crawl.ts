@@ -26,7 +26,7 @@ async function crawlRepositories(): Promise<
     }
 
     const filteredRepos = Array.from(crawlResult.data.values()).filter(
-      (repo) => !config.REPOSITORIES_BLACKLIST.some((bl) => bl(repo.full_name)),
+      (repo) => !config.REPOSITORIES_BLACKLIST.some((bl) => bl(repo)),
     );
 
     logger.info(
