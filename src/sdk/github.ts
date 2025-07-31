@@ -20,6 +20,7 @@ export type GithubRepository = {
   forks_count: number;
   pushed_at: string;
   topics: string[];
+  archived: boolean;
 };
 
 type GithubSearchRepositories = {

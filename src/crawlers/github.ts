@@ -34,22 +34,21 @@ async function crawlTimeRange(
   periodLabel: string,
   options: YearRangeOptions & { topic: string },
   perPage: number = 100,
-): Promise<
-  | { data: GithubRepository[] }
-  | { error: any }
-> {
+): Promise<{ data: GithubRepository[] } | { error: any }> {
   const repos = [] as GithubRepository[];
 
   for (let page = 1; ; page++) {
     const result = await searchRepositories(page, perPage, options);
 
-    if ('error' in result) {
-      logger.error(`Failed to search GitHub repositories for ${periodLabel}: ${result.error}`);
+    if ("error" in result) {
+      logger.error(
+        `Failed to search GitHub repositories for ${periodLabel}: ${result.error}`,
+      );
       return { error: result.error };
     }
 
     const { items, total_count } = result.data;
-    repos.push(...items);
+    repos.push(...items.filter((it) => !it.archived));
     logger.info(
       `Fetched ${items.length} repos, ${repos.length}/${total_count} total for ${periodLabel}`,
     );
@@ -65,10 +64,7 @@ async function crawlTimeRange(
 export async function crawlGithub(opts: {
   yearFrom: number;
   topics: string[];
-}): Promise<
-  | { data: Map<string, GithubRepository> }
-  | { error: any }
-> {
+}): Promise<{ data: Map<string, GithubRepository> } | { error: any }> {
   logger.info("Starting: GitHub topic crawler");
 
   const allRepos = [] as GithubRepository[];
@@ -98,7 +94,7 @@ export async function crawlGithub(opts: {
         rangeOptions,
         perPage,
       );
-      if ('error' in rangeResult) {
+      if ("error" in rangeResult) {
         logger.error(
           `Failed to crawl ${topic} for ${quarterLabel}, continuing...`,
         );

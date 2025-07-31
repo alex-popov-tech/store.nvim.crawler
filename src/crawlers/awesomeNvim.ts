@@ -1,4 +1,8 @@
-import { getRepositoryReadme, getRepository, GithubRepository } from "../sdk/github";
+import {
+  getRepositoryReadme,
+  getRepository,
+  GithubRepository,
+} from "../sdk/github";
 import { createLogger } from "../logger";
 
 type ParsedRepo = {
@@ -13,28 +17,26 @@ const logger = createLogger({ context: "awesome neovim crawler" });
 async function processRepositoriesInBatches<T, R>(
   items: T[],
   processor: (item: T) => Promise<R | null>,
-  batchSize: number = 10
+  batchSize: number = 10,
 ): Promise<R[]> {
   const results: R[] = [];
-  
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(processor)
-    );
-    
+    const batchResults = await Promise.all(batch.map(processor));
+
     // Filter out null results
     for (const result of batchResults) {
       if (result !== null) {
         results.push(result);
       }
     }
-    
+
     if (i + batchSize < items.length) {
       logger.info(`Processed ${i + batchSize}/${items.length} repositories`);
     }
   }
-  
+
   return results;
 }
 
@@ -132,8 +134,7 @@ function parseAwesomeNvimReadme(readmeContent: string) {
 }
 
 export async function crawlAwesomeNvim(): Promise<
-  | { data: Map<string, GithubRepository> }
-  | { error: any }
+  { data: Map<string, GithubRepository> } | { error: any }
 > {
   logger.info("Starting: awesome-neovim crawler");
 
@@ -144,58 +145,62 @@ export async function crawlAwesomeNvim(): Promise<
   }
 
   const parsedRepos = parseAwesomeNvimReadme(readmeResult.data);
-  
-  logger.info(`Fetching full repository data for ${parsedRepos.size} repositories`);
-  
+
+  logger.info(
+    `Fetching full repository data for ${parsedRepos.size} repositories`,
+  );
+
   // Convert map to array for processing
   const repoEntries = Array.from(parsedRepos.entries());
-  
+
   // Process repositories in batches to fetch full data
   const validRepos = await processRepositoriesInBatches(
     repoEntries,
     async ([repoName, parsedRepo]) => {
       const result = await getRepository(repoName);
-      
+
       if (result.error) {
         logger.error(
-          `Failed to fetch repository data for ${repoName}: ${result.error}`
+          `Failed to fetch repository data for ${repoName}: ${result.error}`,
         );
         return null;
       }
-      
+
       if (!result.data) {
-        logger.warn(
-          `No data returned for repository ${repoName}`
-        );
+        logger.warn(`No data returned for repository ${repoName}`);
         return null;
       }
-      
+
       // At this point, result.data is guaranteed to be valid
       const repo = result.data;
-      
+
+      if (result.data.archived) {
+        logger.warn(`Repository ${repoName} is archieved`);
+        return null;
+      }
+
       // Check if repository topics include 'neovim' or 'nvim'
-      const isNvimPlugin = repo.topics.some(topic => 
-        topic.toLowerCase().includes('neovim') || 
-        topic.toLowerCase().includes('nvim')
+      const isNvimPlugin = repo.topics.some(
+        (topic) =>
+          topic.toLowerCase().includes("neovim") ||
+          topic.toLowerCase().includes("nvim"),
       );
-      
+
       if (!isNvimPlugin) {
         logger.warn(
-          `Skipping ${repoName} - not a neovim plugin (topics: ${repo.topics.join(', ')})`
+          `Skipping ${repoName} - not a neovim plugin (topics: ${repo.topics.join(", ")})`,
         );
         return null;
       }
-      
+
       // Add awesome tags to repository topics
-      repo.topics = [
-        ...new Set([...repo.topics, ...parsedRepo.topics])
-      ];
-      
+      repo.topics = [...new Set([...repo.topics, ...parsedRepo.topics])];
+
       return repo;
     },
-    10 // Process 10 repositories concurrently
+    10, // Process 10 repositories concurrently
   );
-  
+
   // Convert back to map
   const resultMap = new Map<string, GithubRepository>();
   for (const repo of validRepos) {
