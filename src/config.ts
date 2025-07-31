@@ -31,6 +31,8 @@ export const config = {
     (rn) => rn.includes("kickstart"),
     (rn) => rn.includes("chaivim"),
     (rn) => rn.includes("NvChad"),
+    (rn) => rn.includes("SpaceVim"),
+    (rn) => rn.includes("LunarVim"),
   ] as ((repoName: string) => boolean)[],
 
   TAGS_BLACKLIST: ["neovim", "nvim", "vim", "lua", "plugin"],
