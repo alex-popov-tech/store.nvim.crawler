@@ -41,10 +41,11 @@ function formatRelativeTime(dateString: string): string {
 
 export function processRepositories(
   repositories: GithubRepository[],
-  installationData?: Record<string, FormattedChunk[]>
+  installationData?: Record<string, FormattedChunk[]>,
 ): ProcessedRepositories {
   const processedRepositories = {
     meta: {
+      version: 2,
       total_count: repositories.length,
       installable_count: 0,
       crawled_at: Math.floor(Date.now() / 1000),
@@ -95,14 +96,16 @@ export function processRepositories(
     // Apply installation config during processing
     const options = installationData?.[repo.full_name];
     if (options?.length) {
-      const lazy = options.find((option) => option.pluginManager === "lazy.nvim");
+      const lazy = options.find(
+        (option) => option.pluginManager === "lazy.nvim",
+      );
       const packer = options.find(
         (option) => option.pluginManager === "packer.nvim",
       );
       const vimPlug = options.find(
         (option) => option.pluginManager === "vim-plug",
       );
-      
+
       if (lazy) {
         item.install = {
           initial: "lazy.nvim",
