@@ -22,6 +22,7 @@ export const config = {
     // plugin managers
     (r) => r.full_name.includes("pckr.nvim"),
     (r) => r.full_name.includes("lazy.nvim"),
+    (r) => r.full_name.includes("packer.nvim"),
     (r) => r.full_name.includes("rocks.nvim"),
     (r) => r.full_name.includes("nvim-plug"),
 

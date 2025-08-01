@@ -7,10 +7,11 @@ const logger = createLogger({ context: "migrator" });
 
 function migrateChunk(
   chunk: ExtractedChunk,
+  repositoryFullName: string,
 ): { val: MigratedChunk } | { error: string } {
   switch (chunk.pluginManager) {
     case "vim-plug":
-      return migrateVimPlug(chunk);
+      return migrateVimPlug(chunk, repositoryFullName);
     case "packer.nvim":
       return migratePacker(chunk);
     case "lazy.nvim":
@@ -31,9 +32,9 @@ function migrateChunks(chunks: ExtractedChunk[], repositoryFullName: string): Mi
   let failedMigrations = 0;
 
   for (const chunk of chunks) {
-    const result = migrateChunk(chunk);
+    const result = migrateChunk(chunk, repositoryFullName);
     if ("error" in result) {
-      logger.debug(
+      logger.info(
         `[${repositoryFullName}] Failed to migrate ${chunk.pluginManager} chunk: ${result.error}`,
       );
       failedMigrations++;

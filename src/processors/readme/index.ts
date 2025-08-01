@@ -19,7 +19,7 @@ export function processReadme(
     logger.warn(`[${repositoryFullName}] No chunks found in README`);
     return [];
   }
-  logger.debug(`[${repositoryFullName}] Cut ${chunks.length} chunks from README`);
+  logger.info(`[${repositoryFullName}] Cut ${chunks.length} chunks from README`);
 
   // Step 2: Rate each chunk and let only high-rated chunks pass
   const ratedChunks = rater.rateChunks(chunks);

@@ -122,7 +122,7 @@ export const extractor = {
       if (ratedChunk.rates["packer.nvim"].verdict === "high") {
         const result = extractPackerPlugins(ratedChunk, expectedRepo);
         if ("error" in result) {
-          logger.debug(`[${expectedRepo}] Failed to extract packer.nvim config: ${result.error}`);
+          logger.info(`[${expectedRepo}] Failed to extract packer.nvim config: ${result.error}`);
           failedExtractions++;
           continue;
         }
@@ -130,7 +130,7 @@ export const extractor = {
       } else if (ratedChunk.rates["lazy.nvim"].verdict === "high") {
         const result = extractLazyPlugins(ratedChunk, expectedRepo);
         if ("error" in result) {
-          logger.debug(`[${expectedRepo}] Failed to extract lazy.nvim config: ${result.error}`);
+          logger.info(`[${expectedRepo}] Failed to extract lazy.nvim config: ${result.error}`);
           failedExtractions++;
           continue;
         }
@@ -138,7 +138,7 @@ export const extractor = {
       } else if (ratedChunk.rates["vim-plug"].verdict === "high") {
         const result = extractVimPlugPlugins(ratedChunk, expectedRepo);
         if ("error" in result) {
-          logger.debug(`[${expectedRepo}] Failed to extract vim-plug config: ${result.error}`);
+          logger.info(`[${expectedRepo}] Failed to extract vim-plug config: ${result.error}`);
           failedExtractions++;
           continue;
         }
@@ -147,7 +147,7 @@ export const extractor = {
     }
 
     if (failedExtractions > 0) {
-      logger.debug(`[${expectedRepo}] Failed to extract ${failedExtractions} configurations`);
+      logger.info(`[${expectedRepo}] Failed to extract ${failedExtractions} configurations`);
     }
 
     // Leave only first extracted chunk for each plugin

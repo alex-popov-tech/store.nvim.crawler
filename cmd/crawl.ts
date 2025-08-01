@@ -109,7 +109,7 @@ async function generateInstallationInstructions(
       }
       readmeProcessed++;
       installData[result.repoName] = result.installations;
-      logger.debug(
+      logger.info(
         `Found ${result.installations!.length} installation methods for ${result.repoName}`,
       );
     }

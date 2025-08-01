@@ -44,9 +44,13 @@ function cutChunks(repoName: string, readmeContent: string): Chunk[] {
   }
 
   // Filter by repo name (case-insensitive)
-  return chunks.filter((chunk) =>
+  const filteredChunks = chunks.filter((chunk) =>
     chunk.content.trim().toLowerCase().includes(repoName.toLowerCase()),
   );
+
+  logger.debug(`Cut chunks: ${JSON.stringify(chunks, null, 2)}`);
+  logger.debug(`Filtered chunks: ${JSON.stringify(filteredChunks, null, 2)}`);
+  return filteredChunks;
 }
 
 // Public API

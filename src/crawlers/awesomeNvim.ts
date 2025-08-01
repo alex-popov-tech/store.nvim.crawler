@@ -60,7 +60,7 @@ function parseAwesomeNvimReadme(readmeContent: string) {
     // Skip until we reach the Contents section
     if (line.trim() === "## Contents") {
       inContentsSection = true;
-      logger.debug(`Found Contents section at line ${processedLines}`);
+      logger.info(`Found Contents section at line ${processedLines}`);
       continue;
     }
 
@@ -68,7 +68,7 @@ function parseAwesomeNvimReadme(readmeContent: string) {
 
     // Stop when we reach External section
     if (line.trim() === "## External") {
-      logger.debug(`Reached External section at line ${processedLines}`);
+      logger.info(`Reached External section at line ${processedLines}`);
       break;
     }
 
@@ -87,11 +87,11 @@ function parseAwesomeNvimReadme(readmeContent: string) {
       if (level === 2) {
         // Main category (## LSP, ## Plugin Manager, etc.)
         currentTags = [title];
-        logger.debug(`Processing category: ${title}`);
+        logger.info(`Processing category: ${title}`);
       } else if (level === 3) {
         // Subcategory (### LSP Installer, ### Diagnostics, etc.)
         currentTags = [currentTags[0], title];
-        logger.debug(`Processing subcategory: ${title}`);
+        logger.info(`Processing subcategory: ${title}`);
       } else if (level === 4) {
         // Sub-subcategory
         // Ensure we have at least 2 levels before adding a third
@@ -101,7 +101,7 @@ function parseAwesomeNvimReadme(readmeContent: string) {
         } else {
           currentTags = [currentTags[0], currentTags[1], title];
         }
-        logger.debug(`Processing sub-subcategory: ${title}`);
+        logger.info(`Processing sub-subcategory: ${title}`);
       }
       continue;
     }

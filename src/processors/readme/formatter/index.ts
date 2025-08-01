@@ -37,7 +37,7 @@ function formatChunks(
         formatted: result.formatted,
       });
     } else {
-      logger.debug(
+      logger.info(
         `[${repositoryFullName}] Failed to format chunk: ${result.error}`,
       );
     }

@@ -17,7 +17,10 @@ export function extractFromVimPlug(
   let match: RegExpExecArray | null;
 
   while ((match = plugRegex.exec(vimCode)) !== null) {
-    extracted.push(match[1]);
+    // prevent duplicates
+    if (!extracted.includes(match[1])) {
+      extracted.push(match[1]);
+    }
   }
 
   if (extracted.length === 0) {

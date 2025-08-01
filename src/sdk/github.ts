@@ -99,7 +99,7 @@ export async function getRepositoryReadme(repo: string) {
         if (error && typeof error === "object" && "response" in error) {
           const axiosError = error as { response?: { status?: number } };
           if (axiosError.response?.status === 404) {
-            logger.debug(
+            logger.info(
               `README not found at ${branch}/${filename} for ${repo}`,
             );
             continue; // Try next combination
@@ -194,7 +194,7 @@ export async function searchRepositories(
         logger.error(
           `HTTP ${axiosError.response.status} ${axiosError.response.statusText}`,
         );
-        logger.debug(
+        logger.info(
           `Response body: ${JSON.stringify(axiosError.response.data, null, 2)}`,
         );
       }

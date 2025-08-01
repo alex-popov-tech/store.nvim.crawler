@@ -2,6 +2,7 @@ import { ExtractedChunk, MigratedChunk } from "../types";
 
 export function migrateVimPlug(
   chunk: ExtractedChunk,
+  repoName: string,
 ): { val: MigratedChunk } | { error: string } {
   // Split by newlines as vim-plug extracted format is newline-separated plugin strings
   const plugins = chunk.extracted.split("\n").filter((line) => line.trim());
@@ -13,9 +14,9 @@ export function migrateVimPlug(
   // Plugins already include quotes from extraction
   const cleanPlugins = plugins.map((p) => p.trim());
 
-  // First plugin is the main one
-  const mainPlugin = cleanPlugins[0];
-
+  // Find the main plugin (the one that includes repoName)
+  const mainPlugin = cleanPlugins.find((p) => p.includes(repoName));
+  
   // Build lazy.nvim configuration
   if (cleanPlugins.length === 1) {
     // Single plugin, simple format
@@ -27,8 +28,11 @@ export function migrateVimPlug(
     };
   }
 
-  // Multiple plugins, first is main, rest are dependencies
-  const dependencies = cleanPlugins.slice(1).join(", ");
+  // Multiple plugins, repoName is main, rest are dependencies
+  const dependencies = cleanPlugins
+    .filter((p) => p !== mainPlugin)
+    .join(", ");
+    
   return {
     val: {
       ...chunk,
