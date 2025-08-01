@@ -1,6 +1,7 @@
 import { GithubRepository } from "~/sdk/github";
 import { ProcessedRepositories, RepositoryInfo } from "~/types";
 import { config } from "~/config";
+import { FormattedChunk } from "./readme/types";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -40,10 +41,12 @@ function formatRelativeTime(dateString: string): string {
 
 export function processRepositories(
   repositories: GithubRepository[],
+  installationData?: Record<string, FormattedChunk[]>
 ): ProcessedRepositories {
   const processedRepositories = {
     meta: {
       total_count: repositories.length,
+      installable_count: 0,
       crawled_at: Math.floor(Date.now() / 1000),
       max_full_name_length: 0,
       max_pretty_stargazers_length: 0,
@@ -89,6 +92,36 @@ export function processRepositories(
       pretty_pushed_at: formatRelativeTime(repo.pushed_at),
     };
 
+    // Apply installation config during processing
+    const options = installationData?.[repo.full_name];
+    if (options?.length) {
+      const lazy = options.find((option) => option.pluginManager === "lazy.nvim");
+      const packer = options.find(
+        (option) => option.pluginManager === "packer.nvim",
+      );
+      const vimPlug = options.find(
+        (option) => option.pluginManager === "vim-plug",
+      );
+      
+      if (lazy) {
+        item.install = {
+          initial: "lazy.nvim",
+          lazyConfig: lazy.formatted,
+        };
+      } else if (packer) {
+        item.install = {
+          initial: "packer.nvim",
+          lazyConfig: packer.formatted,
+        };
+      } else if (vimPlug) {
+        item.install = {
+          initial: "vim-plug",
+          lazyConfig: vimPlug.formatted,
+        };
+      }
+    }
+
+    processedRepositories.meta.installable_count += item.install ? 1 : 0;
     // Track maximum lengths
     processedRepositories.meta.max_full_name_length = Math.max(
       processedRepositories.meta.max_full_name_length,

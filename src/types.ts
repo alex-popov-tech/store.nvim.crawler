@@ -33,6 +33,7 @@ export type RepositoryInfo = {
 export type ProcessedRepositories = {
   meta: {
     total_count: number;
+    installable_count: number;
     crawled_at: number;
     max_full_name_length: number;
     max_pretty_stargazers_length: number;

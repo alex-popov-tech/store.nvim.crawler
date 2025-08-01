@@ -46,10 +46,11 @@ async function crawlRepositories(): Promise<
  */
 function processRepositoriesData(
   repositories: GithubRepository[],
+  installationData?: Record<string, FormattedChunk[]>,
 ): ProcessedRepositories {
   logger.info("⚙️ Starting: Repository Processing");
 
-  const processedRepos = processors.repositories(repositories);
+  const processedRepos = processors.repositories(repositories, installationData);
 
   logger.info(`✅ Processed ${processedRepos.meta.total_count} repositories`);
   logger.info("Repository processing completed");
@@ -125,43 +126,6 @@ async function generateInstallationInstructions(
   return { data: installData };
 }
 
-/**
- * Step 3a: Apply installation configurations to repositories
- */
-function applyInstallationConfigs(
-  repositories: ProcessedRepositories,
-  installationData: Record<string, FormattedChunk[]>,
-): void {
-  for (const repo of repositories.items) {
-    const options = installationData[repo.full_name];
-    if (!options?.length) {
-      continue;
-    }
-    const lazy = options.find((option) => option.pluginManager === "lazy.nvim");
-    const packer = options.find(
-      (option) => option.pluginManager === "packer.nvim",
-    );
-    const vimPlug = options.find(
-      (option) => option.pluginManager === "vim-plug",
-    );
-    if (lazy) {
-      repo.install = {
-        initial: "lazy.nvim",
-        lazyConfig: lazy.formatted,
-      };
-    } else if (packer) {
-      repo.install = {
-        initial: "packer.nvim",
-        lazyConfig: packer.formatted,
-      };
-    } else if (vimPlug) {
-      repo.install = {
-        initial: "vim-plug",
-        lazyConfig: vimPlug.formatted,
-      };
-    }
-  }
-}
 
 /**
  * Sort repositories by installation status and recency
@@ -268,10 +232,7 @@ async function main() {
     throw crawlResult.error;
   }
 
-  // Step 2: Process repository metadata
-  const db = processRepositoriesData(crawlResult.data);
-
-  // Step 3: Extract installation instructions
+  // Step 2: Extract installation instructions
   const installResult = await generateInstallationInstructions(
     crawlResult.data,
   );
@@ -283,8 +244,8 @@ async function main() {
   }
   const { data: install } = installResult;
 
-  // Step 3a: Apply installation configurations to repositories
-  applyInstallationConfigs(db, install);
+  // Step 3: Process repository metadata with installation data
+  const db = processRepositoriesData(crawlResult.data, install);
 
   // Apply natural filtering: plugins with installations first, then without, both sorted by pushed_at
   sortRepositories(db);
