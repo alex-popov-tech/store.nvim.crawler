@@ -19,7 +19,7 @@ jobs:
         run: npm install
       - name: Run crawler
         env:
-          LOG_LEVEL: debug
+          LOG_LEVEL: info
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
           UPDATE_GIST_ID: ${{ vars.UPDATE_GIST_ID }}
         run: npm run start 2>&1 | tee crawler.log
