@@ -48,7 +48,8 @@ export function processRepositories(
       version: 2,
       total_count: repositories.length,
       installable_count: 0,
-      crawled_at: Math.floor(Date.now() / 1000),
+      crawled_at: Date.now(),
+      crawled_in_sec: 0, // will be filled later
       max_full_name_length: 0,
       max_pretty_stargazers_length: 0,
       max_pretty_forks_length: 0,
