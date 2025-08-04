@@ -5,6 +5,7 @@ import { createLogger } from "../logger";
 export type SearchOptions = {
   yearStart?: Date;
   yearEnd?: Date;
+  lastUpdateAfter?: Date;
   topic: string;
 };
 
@@ -81,7 +82,7 @@ export async function getRepositoryReadme(repo: string) {
 
   // Try different combinations of branches and filenames
   const branches = ["main", "master"];
-  const filenames = ["README.md", "readme.md"];
+  const filenames = ["README.md", "readme.md", "Readme.md"];
 
   for (const branch of branches) {
     for (const filename of filenames) {
@@ -155,6 +156,12 @@ export async function searchRepositories(
   } else if (options.yearEnd) {
     const endDate = options.yearEnd.toISOString().split("T")[0];
     query += ` created:<=${endDate}`;
+  }
+
+  // Add last update filter to exclude dead plugins
+  if (options.lastUpdateAfter) {
+    const lastUpdateDate = options.lastUpdateAfter.toISOString().split("T")[0];
+    query += ` pushed:>${lastUpdateDate}`;
   }
 
   try {

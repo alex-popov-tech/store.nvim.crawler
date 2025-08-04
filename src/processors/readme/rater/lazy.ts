@@ -1,11 +1,10 @@
 import { TokenMatcher } from "./types";
 
 export const lazyTokens: TokenMatcher[] = [
-  // Score 4 - ~100% identifies lazy.nvim
   {
     description: "lazy.nvim - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /lazy.nvim/i.test(contextText.toLowerCase());
       return {
@@ -16,9 +15,26 @@ export const lazyTokens: TokenMatcher[] = [
   },
 
   {
+    description: "lazy.nvim - table with plugin name as first item",
+    score: 3,
+    matcher: (repoName, chunk) => {
+      const contextText = chunk.content;
+      const match = new RegExp(`{['"]${repoName}['"]`.toLowerCase()).test(
+        contextText.toLowerCase().replace(/\s+/g, ""),
+      );
+      return {
+        success: match,
+        error: match
+          ? undefined
+          : "No lua table with plugin name as first item found",
+      };
+    },
+  },
+
+  {
     description: "lazy.vim - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /lazy.vim/i.test(contextText.toLowerCase());
       return {
@@ -31,7 +47,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "VeryLazy - lazy.nvim specific event",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /["']VeryLazy["']/.test(chunk.content);
       return {
         success: match,
@@ -44,7 +60,7 @@ export const lazyTokens: TokenMatcher[] = [
     description:
       "require('lazy') - primary function call to initialize lazy.nvim",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /require\s*\(\s*['"]lazy['"]\s*\)/.test(contextText);
       return {
@@ -57,7 +73,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: ":Lazy - lazy.nvim command",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.after;
       const match = /:Lazy/.test(contextText);
       return {
@@ -71,7 +87,7 @@ export const lazyTokens: TokenMatcher[] = [
     description:
       "dependencies = - distinctive keyword for specifying dependencies in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for dependencies = within a lua table context (table somewhere in the context)
       const hasTable = /\{/.test(contextText);
@@ -89,7 +105,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "lazy = - lazy loading control in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for lazy = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -106,7 +122,7 @@ export const lazyTokens: TokenMatcher[] = [
     description:
       "enabled = true|false - plugin enable/disable control in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for enabled = true/false within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -124,7 +140,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "priority = - loading priority control in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for priority = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -140,7 +156,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "build = - build/post-install command in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for build = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -156,7 +172,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "version = - version constraint in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for version = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -172,7 +188,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "pin = - pin to specific commit in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for pin = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -188,7 +204,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "init = - initialization function in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for init = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -204,7 +220,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "{ 'author/plugin' } - plugin spec with single quotes",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\{\s*['"](\w+)\/\w+['"]\s*\}/.test(
         chunk.content.replace(/\n/g, " "),
       );
@@ -219,7 +235,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "lazy - keyword mention in heading",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev;
       // Match standalone 'lazy' word, not as part of other words
       const match = /(?<![\w-])#+.*lazy(?![\w-])/i.test(contextText);
@@ -233,7 +249,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "lazy - keyword mention",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'lazy' word, not as part of other words
       const match = /(?<![\w-])lazy(?![\w-])/i.test(contextText);
@@ -247,7 +263,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "LazyNvim - capitalized keyword mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'Lazy' word, not as part of other words
       const match = /(?<![\w-])LazyNvim(?![\w-])/.test(contextText);
@@ -261,7 +277,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "LazyVim - capitalized keyword mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'Lazy' word, not as part of other words
       const match = /(?<![\w-])LazyVim(?![\w-])/.test(contextText);
@@ -275,7 +291,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "Lazy - capitalized keyword mention",
     score: 3,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'Lazy' word, not as part of other words
       const match = /(?<![\w-])Lazy(?![\w-])/.test(contextText);
@@ -289,7 +305,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "opts = - configuration options in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for opts = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -306,7 +322,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "{ ['\"'] - Lua table with quote start",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\s*\{\s*['"]/.test(chunk.content);
       return {
         success: match,
@@ -318,7 +334,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "cmd = - command specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /cmd\s*=/.test(chunk.content);
       return {
         success: match,
@@ -330,7 +346,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "ft = - filetype specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /ft\s*=/.test(chunk.content);
       return {
         success: match,
@@ -342,7 +358,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "config = - configuration function",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /config\s*=/.test(chunk.content);
       return {
         success: match,
@@ -354,7 +370,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "event = - event specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /event\s*=/.test(chunk.content);
       return {
         success: match,
@@ -366,7 +382,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "keys = - keybinding specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /keys\s*=/.test(chunk.content);
       return {
         success: match,
@@ -379,7 +395,7 @@ export const lazyTokens: TokenMatcher[] = [
   {
     description: "Lua table with quoted plugin name",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\{\s*["'][^"']+\/[^"']+["']/.test(
         chunk.content.replace(/\n/g, " "),
       );

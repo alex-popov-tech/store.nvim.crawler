@@ -5,7 +5,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "packer.nvim - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /packer\.nvim/i.test(contextText.toLowerCase());
       return {
@@ -16,9 +16,26 @@ export const packerTokens: TokenMatcher[] = [
   },
 
   {
+    description: "packer.nvim - table with plugin name as first item",
+    score: 3,
+    matcher: (repoName, chunk) => {
+      const contextText = chunk.content;
+      const match = new RegExp(`{['"]${repoName}['"]`.toLowerCase()).test(
+        contextText.toLowerCase().replace(/\s+/g, ""),
+      );
+      return {
+        success: match,
+        error: match
+          ? undefined
+          : "No lua table with plugin name as first item found",
+      };
+    },
+  },
+
+  {
     description: "packer.startup - initialization function",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /packer\.startup/.test(contextText);
       return {
@@ -31,7 +48,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "require('packer') - initialization function",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       const match = /require\s*\(\s*['"]packer['"]\s*\)/.test(contextText);
       return {
@@ -44,7 +61,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: ":Packer - packer command",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.after;
       const match = /:Packer/.test(contextText);
       return {
@@ -57,7 +74,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "use { - packer plugin definition",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /use\s*\{/.test(chunk.content);
       return {
         success: match,
@@ -69,7 +86,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "use ( - packer plugin definition",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /use\s*\(['{"]/.test(chunk.content);
       return {
         success: match,
@@ -81,7 +98,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "use ' - packer plugin definition with single quote",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /^\s*use\s*['"]/.test(chunk.content);
       return {
         success: match,
@@ -93,7 +110,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "requires = - dependencies specification in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for requires = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -109,7 +126,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "opt = - optional plugin loading in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for opt = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -125,7 +142,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "disabled = true|false - plugin disable control in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for disabled = true/false within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -143,7 +160,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "as = - plugin alias in lua table",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for as = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -159,7 +176,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "setup = - setup function in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for setup = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -175,7 +192,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "run = - build/post-install command in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for run = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -191,7 +208,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "fn = - function specification in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for fn = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -208,7 +225,7 @@ export const packerTokens: TokenMatcher[] = [
     // sometimes present in other configs
     description: "module = - module specification in lua table",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.content;
       // Check for module = within a lua table context
       const hasTable = /\{/.test(contextText);
@@ -224,7 +241,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "{ 'author/plugin' } - plugin spec pattern",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\{\s*['"](\w+)\/\w+['"]\s*\}/.test(
         chunk.content.replace(/\n/g, " "),
       );
@@ -239,7 +256,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "packer - keyword mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'packer' word
       const match = /(?<![\w-])packer(?![\w-])/i.test(contextText);
@@ -253,7 +270,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "Packer - capitalized keyword mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content;
       // Match standalone 'Packer' word
       const match = /(?<![\w-])Packer(?![\w-])/.test(contextText);
@@ -268,7 +285,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "{ ['\"'] - Lua table with quote start",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\s*\{\s*['"]/.test(chunk.content);
       return {
         success: match,
@@ -280,7 +297,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "cmd = - command specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /cmd\s*=/.test(chunk.content);
       return {
         success: match,
@@ -292,7 +309,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "ft = - filetype specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /ft\s*=/.test(chunk.content);
       return {
         success: match,
@@ -304,7 +321,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "config = - configuration function",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /config\s*=/.test(chunk.content);
       return {
         success: match,
@@ -316,7 +333,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "event = - event specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /event\s*=/.test(chunk.content);
       return {
         success: match,
@@ -328,7 +345,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "keys = - keybinding specification",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /keys\s*=/.test(chunk.content);
       return {
         success: match,
@@ -341,7 +358,7 @@ export const packerTokens: TokenMatcher[] = [
   {
     description: "Lua table with quoted plugin name",
     score: 2,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /\{\s*["'][^"']+\/[^"']+["']/.test(
         chunk.content.replace(/\n/g, " "),
       );

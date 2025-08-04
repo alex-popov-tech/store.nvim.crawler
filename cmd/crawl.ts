@@ -8,6 +8,7 @@ import { writeFileSync } from "fs";
 import { createLogger } from "../src/logger";
 import { ProcessedRepositories } from "~";
 import { FormattedChunk } from "~/processors/readme/types";
+import pLimit from "p-limit";
 
 const logger = createLogger({ context: "main" });
 
@@ -46,11 +47,14 @@ async function crawlRepositories(): Promise<
  */
 function processRepositoriesData(
   repositories: GithubRepository[],
-  installationData?: Record<string, FormattedChunk[]>,
+  installationData: Record<string, FormattedChunk[]>,
 ): ProcessedRepositories {
   logger.info("⚙️ Starting: Repository Processing");
 
-  const processedRepos = processors.repositories(repositories, installationData);
+  const processedRepos = processors.repositories(
+    repositories,
+    installationData,
+  );
 
   logger.info(`✅ Processed ${processedRepos.meta.total_count} repositories`);
   logger.info("Repository processing completed");
@@ -69,51 +73,51 @@ async function generateInstallationInstructions(
   const installData: Record<string, FormattedChunk[]> = {};
   let readmeProcessed = 0;
   let readmeFailed = 0;
-  const CHUNK_SIZE = 10;
 
-  // Process repositories in chunks
-  for (let i = 0; i < repositories.length; i += CHUNK_SIZE) {
-    const chunk = repositories.slice(i, i + CHUNK_SIZE);
-    const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
-    const totalChunks = Math.ceil(repositories.length / CHUNK_SIZE);
+  // Create a limit function with the configured concurrency
+  const limit = pLimit(config.crawler.concurrentRequestsLimit);
 
-    logger.info(
-      `📦 Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} repositories)`,
-    );
+  logger.info(
+    `Processing ${repositories.length} repositories with concurrency limit of ${config.crawler.concurrentRequestsLimit}`,
+  );
 
-    // Process all repositories in the chunk in parallel
-    const chunkPromises = chunk.map(async (repo) => {
-      const readme = await getRepositoryReadme(repo.full_name);
-      if (readme.data) {
-        const installations = processors.readme(repo.full_name, readme.data);
-        return {
-          repoName: repo.full_name,
-          installations,
-        };
-      } else {
-        return {
-          repoName: repo.full_name,
-          installations: [],
-        };
+  // Create all promises with p-limit
+  const promises = repositories.map((repo, index) =>
+    limit(async () => {
+      try {
+        const readme = await getRepositoryReadme(repo.full_name);
+
+        if (readme.data) {
+          const installations = processors.readme(repo.full_name, readme.data);
+
+          if (installations.length > 0) {
+            readmeProcessed++;
+            installData[repo.full_name] = installations;
+            logger.info(
+              `[${index + 1}/${repositories.length}] Found ${installations.length} installation methods for ${repo.full_name}`,
+            );
+          } else {
+            logger.warn(
+              `[${index + 1}/${repositories.length}] No installations found for ${repo.full_name}`,
+            );
+          }
+        } else {
+          readmeFailed++;
+          logger.warn(
+            `[${index + 1}/${repositories.length}] Failed to fetch README for ${repo.full_name}`,
+          );
+        }
+      } catch (error) {
+        readmeFailed++;
+        logger.error(
+          `[${index + 1}/${repositories.length}] Error processing ${repo.full_name}: ${error}`,
+        );
       }
-    });
+    }),
+  );
 
-    // Wait for all READMEs in the chunk to be processed
-    const chunkResults = await Promise.all(chunkPromises);
-
-    // Process results
-    for (const result of chunkResults) {
-      if (result.installations.length === 0) {
-        logger.warn(`No installations found for ${result.repoName}`);
-        continue;
-      }
-      readmeProcessed++;
-      installData[result.repoName] = result.installations;
-      logger.info(
-        `Found ${result.installations!.length} installation methods for ${result.repoName}`,
-      );
-    }
-  }
+  // Wait for all processing to complete
+  await Promise.all(promises);
 
   logger.info(
     `✅ Processed ${readmeProcessed} READMEs, ${readmeFailed} failed`,
@@ -125,7 +129,6 @@ async function generateInstallationInstructions(
 
   return { data: installData };
 }
-
 
 /**
  * Sort repositories by installation status and recency
@@ -161,13 +164,22 @@ function saveToFilesystem(args: {
   logger.info("💾 Starting: Saving to Filesystem");
 
   try {
-    writeFileSync(config.output.db, JSON.stringify(args.db, null, 2));
+    writeFileSync(
+      `${config.output.dir}/${config.output.db}`,
+      JSON.stringify(args.db, null, 2),
+    );
     logger.info("✅ Results written to db.json");
 
-    writeFileSync(config.output.install, JSON.stringify(args.install, null, 2));
+    writeFileSync(
+      `${config.output.dir}/${config.output.install}`,
+      JSON.stringify(args.install, null, 2),
+    );
     logger.info("✅ Installation data written to install.json");
 
-    writeFileSync(config.output.minifiedDb, args.minifiedDb);
+    writeFileSync(
+      `${config.output.dir}/${config.output.minifiedDb}`,
+      args.minifiedDb,
+    );
     logger.info("✅ Results written to db_minified.json");
 
     logger.info("Filesystem save completed");
@@ -221,6 +233,7 @@ function compressDb(processedRepositories: ProcessedRepositories): string {
  * Main orchestrator function
  */
 async function main() {
+  const start = Date.now();
   logger.info("🚀 Store.nvim Crawler Starting");
 
   // Step 1: Crawl repositories
@@ -246,6 +259,7 @@ async function main() {
 
   // Step 3: Process repository metadata with installation data
   const db = processRepositoriesData(crawlResult.data, install);
+  db.meta.crawled_in_sec = Math.round((Date.now() - start) / 1000);
 
   // Apply natural filtering: plugins with installations first, then without, both sorted by pushed_at
   sortRepositories(db);
@@ -264,10 +278,11 @@ async function main() {
   }
 
   // Step 5: Update gist
-  await updateGistDb(minifiedDb);
+  // await updateGistDb(minifiedDb);
 
   logger.info(
-    `🎉 Crawling completed successfully! ${db.meta.total_count} repositories processed`,
+    `🎉 Crawling completed successfully in ${Math.round((Date.now() - start) / 1000)}sec!
+${db.meta.total_count} repositories processed`,
   );
 }
 

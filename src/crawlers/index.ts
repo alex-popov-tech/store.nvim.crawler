@@ -7,7 +7,6 @@ import { config } from "~/config";
 const logger = createLogger({ context: "crawler orchestrator" });
 
 // Constants
-const YEAR_FROM = config.crawler.yearToPullPluginsFrom;
 const TOPICS = config.crawler.topics;
 
 /**
@@ -16,7 +15,6 @@ const TOPICS = config.crawler.topics;
 async function runGithubCrawl() {
   logger.info("Starting GitHub topic crawl");
   const result = await crawlGithub({
-    yearFrom: YEAR_FROM,
     topics: TOPICS,
   });
 

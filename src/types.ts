@@ -36,6 +36,7 @@ export type ProcessedRepositories = {
     total_count: number;
     installable_count: number;
     crawled_at: number;
+    crawled_in_sec: number;
     max_full_name_length: number;
     max_pretty_stargazers_length: number;
     max_pretty_forks_length: number;
@@ -54,4 +55,5 @@ export type CrawlerOutput = {
 export type YearRangeOptions = {
   yearStart?: Date;
   yearEnd?: Date;
+  lastUpdateAfter?: Date;
 };

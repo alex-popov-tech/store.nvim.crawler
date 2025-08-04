@@ -1,7 +1,10 @@
 import { Chunk } from "../types";
 
 export interface TokenMatcher {
-  matcher: (chunk: Chunk) => {
+  matcher: (
+    repoName: string,
+    chunk: Chunk,
+  ) => {
     success: boolean;
     error?: string;
   };

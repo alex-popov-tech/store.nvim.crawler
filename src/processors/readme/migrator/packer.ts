@@ -10,6 +10,7 @@ const FIELD_MAPPINGS: Record<string, string> = {
   requires: "dependencies",
   opt: "lazy",
   disable: "enabled", // needs value inversion
+  run: "build",
 };
 
 // Fields that should cause migration to fail
@@ -23,7 +24,6 @@ const INCOMPATIBLE_FIELDS = [
   "installer",
   "updater",
   "rtp",
-  "run",
 ];
 
 function migrateStringConfiguration(chunk: ExtractedChunk): {

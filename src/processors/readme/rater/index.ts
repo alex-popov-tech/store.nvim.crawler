@@ -4,6 +4,9 @@ import { lazyTokens } from "./lazy";
 import { packerTokens } from "./packer";
 import { TokenMatcher } from "./types";
 import { vimPlugTokens } from "./vim-plug";
+import { createLogger } from "~/logger";
+
+const logger = createLogger({ context: "rater" });
 
 // Inline type for rating result
 interface RatingResult {
@@ -46,12 +49,16 @@ function calculateVerdictForManager(ratingResult: RatingResult): {
   }
 }
 
-function rateWithTokens(chunk: Chunk, tokens: TokenMatcher[]): RatingResult {
+function rateWithTokens(
+  repoName: string,
+  chunk: Chunk,
+  tokens: TokenMatcher[],
+): RatingResult {
   let totalScore = 0;
   const matchedTokens = [];
 
   for (const token of tokens) {
-    const result = token.matcher(chunk);
+    const result = token.matcher(repoName, chunk);
 
     if (result.success) {
       totalScore += token.score;
@@ -69,14 +76,14 @@ function rateWithTokens(chunk: Chunk, tokens: TokenMatcher[]): RatingResult {
   };
 }
 
-function rateChunk(chunk: Chunk): RatedChunk {
+function rateChunk(repoName: string, chunk: Chunk): RatedChunk {
   const rates: Partial<RatedChunk["rates"]> = {};
 
   for (const [manager, tokens] of Object.entries(raters) as [
     PluginManager,
     TokenMatcher[],
   ][]) {
-    const result = rateWithTokens(chunk, tokens);
+    const result = rateWithTokens(repoName, chunk, tokens);
     const verdictInfo = calculateVerdictForManager(result);
 
     rates[manager] = {
@@ -85,14 +92,34 @@ function rateChunk(chunk: Chunk): RatedChunk {
     };
   }
 
+  // if found more than 1 'high' - leave only one which has the highest score
+  const isHighTie =
+    Object.values(rates).filter((r) => r.verdict === "high").length > 1;
+  if (isHighTie) {
+    const sum = (nums: number[]) => nums.reduce((a, b) => a + b, 0);
+    const pluginManagersScores = Object.entries(rates)
+      .map(([pm, r]) => ({ pm, r: sum(r.scores) }))
+      .sort((a, b) => b.r - a.r);
+    const pluginManagerWithHighestScore = pluginManagersScores[0];
+    for (const [pm, r] of Object.entries(rates)) {
+      if (pm === pluginManagerWithHighestScore.pm) {
+        r.verdict = "high";
+      } else {
+        r.verdict = "medium";
+      }
+    }
+  }
+
   return {
     ...chunk,
     rates: rates as RatedChunk["rates"],
   };
 }
 
-function rateChunks(chunks: Chunk[]): RatedChunk[] {
-  return chunks.map((chunk) => rateChunk(chunk));
+function rateChunks(repoName: string, chunks: Chunk[]): RatedChunk[] {
+  const result = chunks.map((chunk) => rateChunk(repoName, chunk));
+  logger.debug(`Rated chunks: ${JSON.stringify(result, null, 2)}`);
+  return result;
 }
 
 // Public API

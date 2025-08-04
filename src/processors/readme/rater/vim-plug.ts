@@ -5,7 +5,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "vim-plug - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /(?<![\w])vim-plug(?![\w])/i.test(contextText);
       return {
@@ -18,7 +18,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "vimplug - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /(?<![\w])vimplug(?![\w])/i.test(contextText);
       return {
@@ -31,7 +31,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "vim plug - explicit mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /(?<![\w])vim\s+plug(?![\w])/i.test(contextText);
       return {
@@ -44,7 +44,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "Plug - keyword mention",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev;
       // Match standalone 'Plug' word
       const match = /(?<![\w-])Plug(?![\w-])/.test(contextText);
@@ -58,7 +58,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "Plug ' - plugin definition with single quote",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /Plug\s+'/.test(chunk.content);
       return {
         success: match,
@@ -70,7 +70,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "plug#begin - initialization function",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /plug#begin/.test(contextText);
       return {
@@ -83,7 +83,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "plug#end - finalization function",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /plug#end/.test(contextText);
       return {
@@ -96,7 +96,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: ":PlugInstall - vim-plug command",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const contextText = chunk.prev + " " + chunk.content + " " + chunk.after;
       const match = /:PlugInstall/.test(contextText);
       return {
@@ -109,7 +109,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "PlugInstall - vim-plug command reference",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /PlugInstall/.test(chunk.content);
       return {
         success: match,
@@ -121,7 +121,7 @@ export const vimPlugTokens: TokenMatcher[] = [
   {
     description: "UpdateRemotePlugins - vim-plug related command",
     score: 4,
-    matcher: (chunk) => {
+    matcher: (repoName, chunk) => {
       const match = /UpdateRemotePlugins/.test(chunk.content);
       return {
         success: match,

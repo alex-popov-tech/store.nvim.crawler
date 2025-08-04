@@ -18,6 +18,7 @@ export const config = {
     // random repositories which for some reason have
     // topics like 'neovim-plugin' and get crawled
     (r) => r.full_name.trim().endsWith("dotfiles"),
+    (r) => r.full_name.trim().endsWith("vimrc"),
 
     // plugin managers
     (r) => r.full_name.includes("pckr.nvim"),
@@ -25,6 +26,7 @@ export const config = {
     (r) => r.full_name.includes("packer.nvim"),
     (r) => r.full_name.includes("rocks.nvim"),
     (r) => r.full_name.includes("nvim-plug"),
+    (r) => r.full_name.includes("minpac"),
 
     // frameworks
     (r) => r.full_name.includes("AstroNvim"),
@@ -35,6 +37,8 @@ export const config = {
     (r) => r.full_name.includes("NvChad"),
     (r) => r.full_name.includes("SpaceVim"),
     (r) => r.full_name.includes("LunarVim"),
+    (r) => r.full_name.includes("ayamir/nvimdots"),
+    (r) => r.full_name.includes("nyoom.nvim"),
 
     // archieved repos
     (r) => r.archived,
@@ -49,15 +53,26 @@ export const config = {
   },
 
   crawler: {
-    yearToPullPluginsFrom: 2013, // pull all plugins created at 2010 or later
-    topics: ["nvim-plugin", "neovim-plugin"], // pull all plugins which have any of these topics
-    // yearToPullPluginsFrom: 2025,
-    // topics: ["nvim-plugin"],
+    // pull all plugins which have any of these topics
+    topics: [
+      "nvim-plugin",
+      "nvim-plugins",
+      "neovim-plugin",
+      "neovim-plugins",
+      "neovim-theme",
+      "neovim-colorscheme",
+    ],
+    // limit concurrent README fetch requests
+    concurrentRequestsLimit: 40,
+    // last update should be not longer than 3 years ago ( attempt to detect dead plugins )
+    lastUpdateAllowedInDays: 365 * 3,
   },
 
   output: {
+    dir: "output",
     db: "db.json",
     install: "install.json",
     minifiedDb: "db_minified.json",
+    topicRanges: "topic_ranges.json",
   },
 };
