@@ -4,7 +4,7 @@ import { crawl } from "~/crawlers";
 import { getRepositoryReadme, GithubRepository, updateGist } from "~/sdk";
 import { processors } from "~/processors";
 import { config } from "~/config";
-import { writeFileSync } from "fs";
+import { writeFile, mkdir, stat } from "fs/promises";
 import { createLogger } from "../src/logger";
 import { ProcessedRepositories } from "~";
 import { FormattedChunk } from "~/processors/readme/types";
@@ -156,27 +156,33 @@ function sortRepositories(repositories: ProcessedRepositories): void {
 /**
  * Step 4: Save separate json's for plugins info, and readme's processing results
  */
-function saveToFilesystem(args: {
+async function saveToFilesystem(args: {
   db: ProcessedRepositories;
   install: Record<string, FormattedChunk[]>;
   minifiedDb: string;
-}): { error?: any } {
+}): Promise<{ error?: any }> {
   logger.info("💾 Starting: Saving to Filesystem");
 
   try {
-    writeFileSync(
+    const stats = await stat(config.output.dir);
+    // create dir if it doesn't exist
+    if (!stats.isDirectory()) {
+      await mkdir(config.output.dir);
+    }
+
+    await writeFile(
       `${config.output.dir}/${config.output.db}`,
       JSON.stringify(args.db, null, 2),
     );
     logger.info("✅ Results written to db.json");
 
-    writeFileSync(
+    writeFile(
       `${config.output.dir}/${config.output.install}`,
       JSON.stringify(args.install, null, 2),
     );
     logger.info("✅ Installation data written to install.json");
 
-    writeFileSync(
+    writeFile(
       `${config.output.dir}/${config.output.minifiedDb}`,
       args.minifiedDb,
     );
@@ -270,7 +276,7 @@ async function main() {
   const minifiedDb = compressDb(db);
 
   // Step 4: Save to filesystem full versions
-  const saveResult = saveToFilesystem({ db, minifiedDb, install });
+  const saveResult = await saveToFilesystem({ db, minifiedDb, install });
 
   if ("error" in saveResult) {
     logger.error(`💥 Pipeline failed at filesystem save: ${saveResult.error}`);
@@ -278,7 +284,7 @@ async function main() {
   }
 
   // Step 5: Update gist
-  // await updateGistDb(minifiedDb);
+  await updateGistDb(minifiedDb);
 
   logger.info(
     `🎉 Crawling completed successfully in ${Math.round((Date.now() - start) / 1000)}sec!
