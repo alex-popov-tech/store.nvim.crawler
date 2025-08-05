@@ -77,13 +77,16 @@ export async function getRepository(
   }
 }
 
-export async function getRepositoryReadme(repo: string) {
+export async function getRepositoryReadme(
+  repo: string,
+): Promise<{ data: string; readmePath: string } | { error: string }> {
   logger.info(`Starting: README fetch for ${repo}`);
 
   // Try different combinations of branches and filenames
   const branches = ["main", "master"];
-  const filenames = ["README.md", "readme.md", "Readme.md"];
+  const filenames = ["README.md", "readme.md", "Readme.md", "store.md"];
 
+  const errors: string[] = [];
   for (const branch of branches) {
     for (const filename of filenames) {
       const url = `https://raw.githubusercontent.com/${repo}/${branch}/${filename}`;
@@ -94,45 +97,16 @@ export async function getRepositoryReadme(repo: string) {
         logger.info(
           `Done fetching README for ${repo} from ${branch}/${filename}`,
         );
-        return { data: content, error: null };
+        return { data: content, readmePath: `${branch}/${filename}` };
       } catch (error) {
-        // Continue to next combination on 404, but log other errors
-        if (error && typeof error === "object" && "response" in error) {
-          const axiosError = error as { response?: { status?: number } };
-          if (axiosError.response?.status === 404) {
-            logger.info(
-              `README not found at ${branch}/${filename} for ${repo}`,
-            );
-            continue; // Try next combination
-          } else if (axiosError.response?.status === 403) {
-            logger.error(
-              `Access forbidden for ${repo} at ${branch}/${filename} (403) - check token permissions`,
-            );
-            return { data: null, error };
-          } else {
-            logger.warn(
-              `Unexpected error fetching ${repo} from ${branch}/${filename}: ${axiosError.response?.status}`,
-            );
-            continue; // Try next combination
-          }
-        } else {
-          logger.warn(
-            `Network error fetching ${repo} from ${branch}/${filename}: ${error}`,
-          );
-          continue; // Try next combination
-        }
+        errors.push(error instanceof Error ? error.message : "Unknown error");
       }
     }
   }
 
-  // If we get here, all combinations failed
-  const errorMessage = `README not found for ${repo} in any of the tried locations`;
-  logger.error(errorMessage);
-  logger.warn(
-    `Tried all combinations: ${branches.map((b) => filenames.map((f) => `${b}/${f}`).join(", ")).join(", ")}`,
-  );
-
-  return { data: null, error: new Error(errorMessage) };
+  return {
+    error: `README not found for ${repo} in any of the tried locations, errors: ${errors.join("\n")}`,
+  };
 }
 
 export async function searchRepositories(

@@ -69,10 +69,9 @@ export const config = {
   },
 
   output: {
-    dir: "output",
-    db: "db.json",
-    install: "install.json",
-    minifiedDb: "db_minified.json",
-    topicRanges: "topic_ranges.json",
+    db: "output/db.json",
+    install: "output/install.json",
+    dbMinified: "output/db_minified.json",
+    topicRanges: "output/topic_ranges.json",
   },
 };

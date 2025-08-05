@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Repositories crawler for store.nvim",
   "scripts": {
-    "crawling": "tsx cmd/crawl.ts",
+    "crawling": "tsx cmd/crawl.ts | tee output/log",
     "generateTopicRanges": "tsx cmd/generateTopicRanges.ts",
     "compile": "tsc --noEmit"
   },

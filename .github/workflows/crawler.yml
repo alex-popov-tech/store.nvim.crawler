@@ -22,15 +22,15 @@ jobs:
           LOG_LEVEL: info
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
           UPDATE_GIST_ID: ${{ vars.UPDATE_GIST_ID }}
-        run: npm run crawling 2>&1 | tee crawler.log
+        run: npm run crawling
       - name: Upload crawl results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: crawler-results
+          name: crawling-results
           path: |
-            db.json
-            install.json
-            db_minified.json
-            crawler.log
+            output/db.json
+            output/install.json
+            output/db_minified.json
+            output/log
           retention-days: 3

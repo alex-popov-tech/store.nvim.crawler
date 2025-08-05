@@ -7,27 +7,55 @@ const logger = createLogger({ context: "github search repos crawler" });
 
 const TOPIC_CRAWLING_SCHEDULES = {
   "nvim-plugin": [
-    { from: new Date(2017, 0, 1), to: new Date(2023, 11, 31), label: "2017-2023" }, // 463 repos
-    { from: new Date(2024, 0, 1), to: new Date(2025, 11, 31), label: "2024-2025" }, // 526 repos
+    {
+      from: new Date(2017, 0, 1),
+      to: new Date(2023, 11, 31),
+      label: "2017-2023",
+    }, // 463 repos
+    {
+      from: new Date(2024, 0, 1),
+      to: new Date(2025, 11, 31),
+      label: "2024-2025",
+    }, // 526 repos
   ],
   "nvim-plugins": [
-    { from: new Date(2018, 0, 1), to: new Date(2025, 11, 31), label: "2018-2025" }, // 61 repos
+    {
+      from: new Date(2018, 0, 1),
+      to: new Date(2025, 11, 31),
+      label: "2018-2025",
+    }, // 61 repos
   ],
   "neovim-plugin": [
-    { from: new Date(2013, 0, 1), to: new Date(2021, 11, 31), label: "2013-2021" }, // 618 repos
+    {
+      from: new Date(2013, 0, 1),
+      to: new Date(2021, 11, 31),
+      label: "2013-2021",
+    }, // 618 repos
     { from: new Date(2022, 0, 1), to: new Date(2022, 11, 31), label: "2022" }, // 451 repos
     { from: new Date(2023, 0, 1), to: new Date(2023, 11, 31), label: "2023" }, // 644 repos
     { from: new Date(2024, 0, 1), to: new Date(2024, 11, 31), label: "2024" }, // 961 repos
     { from: new Date(2025, 0, 1), to: new Date(2025, 11, 31), label: "2025" }, // 587 repos
   ],
   "neovim-plugins": [
-    { from: new Date(2016, 0, 1), to: new Date(2025, 11, 31), label: "2016-2025" }, // 159 repos
+    {
+      from: new Date(2016, 0, 1),
+      to: new Date(2025, 11, 31),
+      label: "2016-2025",
+    }, // 159 repos
   ],
   "neovim-theme": [
-    { from: new Date(2014, 0, 1), to: new Date(2025, 11, 31), label: "2014-2025" }, // 161 repos
+    {
+      from: new Date(2014, 0, 1),
+      to: new Date(2025, 11, 31),
+      label: "2014-2025",
+    }, // 161 repos
   ],
   "neovim-colorscheme": [
-    { from: new Date(2014, 0, 1), to: new Date(2025, 11, 31), label: "2014-2025" }, // 296 repos
+    {
+      from: new Date(2014, 0, 1),
+      to: new Date(2025, 11, 31),
+      label: "2014-2025",
+    }, // 296 repos
   ],
 } as const;
 

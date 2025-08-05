@@ -1,0 +1,24 @@
+name: Generate Topic Ranges
+on:
+  schedule:
+    # Run daily at 1 AM UTC (2 hours before crawler)
+    - cron: '0 1 * * *'
+  workflow_dispatch: # Allow manual triggering
+jobs:
+  generate-ranges:
+    name: Generate topic ranges data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install dependencies
+        run: npm install
+      - name: Generate topic ranges
+        env:
+          LOG_LEVEL: info
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        run: npm run generateTopicRanges

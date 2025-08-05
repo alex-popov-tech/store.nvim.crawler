@@ -9,6 +9,7 @@ export type RepositoryInfo = {
   homepage: string;
   created_at: number;
 
+  readme?: string;
   install?: {
     initial: PluginManager;
     lazyConfig: string;

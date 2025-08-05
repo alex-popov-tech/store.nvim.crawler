@@ -4,6 +4,8 @@ import {
   GithubRepository,
 } from "../sdk/github";
 import { createLogger } from "../logger";
+import pLimit from "p-limit";
+import { config } from "../config";
 
 type ParsedRepo = {
   full_name: string;
@@ -12,33 +14,6 @@ type ParsedRepo = {
 
 const AWESOME_NEOVIM_REPO = "rockerBOO/awesome-neovim";
 const logger = createLogger({ context: "awesome neovim crawler" });
-
-// Helper function to process repositories in batches with concurrency control
-async function processRepositoriesInBatches<T, R>(
-  items: T[],
-  processor: (item: T) => Promise<R | null>,
-  batchSize: number = 10,
-): Promise<R[]> {
-  const results: R[] = [];
-
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(processor));
-
-    // Filter out null results
-    for (const result of batchResults) {
-      if (result !== null) {
-        results.push(result);
-      }
-    }
-
-    if (i + batchSize < items.length) {
-      logger.info(`Processed ${i + batchSize}/${items.length} repositories`);
-    }
-  }
-
-  return results;
-}
 
 function parseAwesomeNvimReadme(readmeContent: string) {
   const githubUrlRegex =
@@ -139,7 +114,7 @@ export async function crawlAwesomeNvim(): Promise<
   logger.info("Starting: awesome-neovim crawler");
 
   const readmeResult = await getRepositoryReadme(AWESOME_NEOVIM_REPO);
-  if (readmeResult.error) {
+  if ("error" in readmeResult) {
     logger.error("Failed to fetch content from rockerBOO/awesome-neovim");
     return { error: readmeResult.error };
   }
@@ -147,16 +122,18 @@ export async function crawlAwesomeNvim(): Promise<
   const parsedRepos = parseAwesomeNvimReadme(readmeResult.data);
 
   logger.info(
-    `Fetching full repository data for ${parsedRepos.size} repositories`,
+    `Fetching full repository data for ${parsedRepos.size} repositories with concurrency limit of ${config.crawler.concurrentRequestsLimit}`,
   );
+
+  // Create a limit function with the configured concurrency
+  const limit = pLimit(config.crawler.concurrentRequestsLimit);
 
   // Convert map to array for processing
   const repoEntries = Array.from(parsedRepos.entries());
 
-  // Process repositories in batches to fetch full data
-  const validRepos = await processRepositoriesInBatches(
-    repoEntries,
-    async ([repoName, parsedRepo]) => {
+  // Process all repositories with p-limit for concurrency control
+  const promises = repoEntries.map(([repoName, parsedRepo]) =>
+    limit(async () => {
       const result = await getRepository(repoName);
 
       if (result.error) {
@@ -192,9 +169,12 @@ export async function crawlAwesomeNvim(): Promise<
       repo.topics = [...new Set([...repo.topics, ...parsedRepo.topics])];
 
       return repo;
-    },
-    10, // Process 10 repositories concurrently
+    }),
   );
+
+  // Wait for all promises to complete and filter out null results
+  const results = await Promise.all(promises);
+  const validRepos = results.filter((repo): repo is GithubRepository => repo !== null);
 
   // Convert back to map
   const resultMap = new Map<string, GithubRepository>();

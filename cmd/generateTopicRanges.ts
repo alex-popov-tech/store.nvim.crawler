@@ -60,7 +60,7 @@ async function getTopicRangeCount(
     lastUpdateCutoff.setDate(
       lastUpdateCutoff.getDate() - config.crawler.lastUpdateAllowedInDays,
     );
-    
+
     const result = await searchRepositories(1, 1, {
       topic,
       yearStart: dateRange.from,
@@ -102,10 +102,7 @@ async function main() {
 
   // Output as JSON
   console.log(JSON.stringify(results, null, 2));
-  fs.writeFile(
-    `${config.output.dir}/${config.output.topicRanges}`,
-    JSON.stringify(results, null, 2),
-  );
+  fs.writeFile(config.output.topicRanges, JSON.stringify(results, null, 2));
 }
 
 // Run the script
@@ -113,4 +110,3 @@ main().catch((error) => {
   console.error("Script failed:", error);
   process.exit(1);
 });
-
