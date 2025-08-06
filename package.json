@@ -25,6 +25,7 @@
   "homepage": "https://github.com/alex-popov-tech/store.nvim.crawler#readme",
   "devDependencies": {
     "@types/node": "^24.0.13",
+    "@types/turndown": "^5.0.5",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
