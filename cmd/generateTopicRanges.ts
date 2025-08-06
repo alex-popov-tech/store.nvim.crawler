@@ -98,12 +98,6 @@ async function main() {
 
   // Output as JSON
   console.log(JSON.stringify(results, null, 2));
-
-  const dir = path.dirname(config.output.topicRanges);
-  const stats = await fs.stat(dir).catch((error) => ({ error }));
-  if ("error" in stats || !stats.isDirectory()) {
-    await fs.mkdir(dir);
-  }
   await fs.writeFile(
     config.output.topicRanges,
     JSON.stringify(results, null, 2),

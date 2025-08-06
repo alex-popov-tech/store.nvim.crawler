@@ -2,3 +2,5 @@
 node_modules
 crawler_results.json
 .env
+output/*
+!output/.gitkeep

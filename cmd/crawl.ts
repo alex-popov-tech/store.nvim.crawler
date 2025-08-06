@@ -174,12 +174,6 @@ async function saveToFilesystem(args: {
     const dbMinifiedpath = path.resolve(".", config.output.dbMinified);
     const installpath = path.resolve(".", config.output.install);
 
-    const dir = path.dirname(dbpath);
-    const stats = await stat(dir).catch((error) => ({ error }));
-    if ("error" in stats || !stats.isDirectory()) {
-      await mkdir(dir);
-    }
-
     await writeFile(dbpath, JSON.stringify(args.db, null, 2));
     logger.info(`✅ DB written to ${dbpath}`);
 
@@ -301,8 +295,7 @@ async function main() {
   await updateGistDb(minifiedDb);
 
   logger.info(
-    `🎉 Crawling completed successfully in ${Math.round((Date.now() - start) / 1000)}sec!
-${db.meta.total_count} repositories processed`,
+    `🎉 Crawling completed successfully in ${Math.round((Date.now() - start) / 1000)}sec! ${db.meta.total_count} repositories processed`,
   );
 }
 
