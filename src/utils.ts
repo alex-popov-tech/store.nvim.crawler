@@ -6,22 +6,25 @@ turndownService.addRule("fencedCodeBlocks", {
   filter: (node) => {
     return (
       node.nodeName === "PRE" &&
-      node.firstChild &&
+      node.firstChild !== null &&
       node.firstChild.nodeName === "CODE"
     );
   },
   replacement: (content, node) => {
     const code = node.textContent;
-    const lang =
-      node.firstChild.getAttribute("class")?.replace(/^language-/, "") || "";
-    return `\n\`\`\`${lang}\n${code}\n\`\`\`\n`;
+    if (node.firstChild && node.firstChild instanceof Element) {
+      const lang =
+        node.firstChild.getAttribute("class")?.replace(/^language-/, "") || "";
+      return `\n\`\`\`${lang}\n${code}\n\`\`\`\n`;
+    }
+    return `\n\`\`\`\n${code}\n\`\`\`\n`;
   },
 });
 
 export const utils = {
   adocToMarkdown: (adoc: string) => {
     const html = asciidoctor().convert(adoc);
-    const markdown = turndownService.turndown(html);
+    const markdown = turndownService.turndown(html as string);
     return markdown;
   },
 };

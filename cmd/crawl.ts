@@ -164,10 +164,7 @@ function sortRepositories(repositories: ProcessedRepositories): void {
  */
 async function saveToFilesystem(args: {
   db: ProcessedRepositories;
-  install: Map<
-    string,
-    { readmePath: string; installations: FormattedChunk[] }
-  >;
+  install: Map<string, { readmePath: string; installations: FormattedChunk[] }>;
   dbMinified: string;
 }): Promise<{ error?: any }> {
   logger.info("💾 Starting: Saving to Filesystem");
@@ -190,12 +187,14 @@ async function saveToFilesystem(args: {
     logger.info(`✅ DB minified written to ${dbMinifiedpath}`);
 
     // Convert Map to array format for install.json
-    const installArray = Array.from(args.install.entries()).map(([full_name, data]) => ({
-      full_name,
-      readme: data.readmePath,
-      installations: data.installations
-    }));
-    
+    const installArray = Array.from(args.install.entries()).map(
+      ([full_name, data]) => ({
+        full_name,
+        readme: data.readmePath,
+        installations: data.installations,
+      }),
+    );
+
     await writeFile(installpath, JSON.stringify(installArray, null, 2));
     logger.info(`✅ Installation data written to ${installpath}`);
 
@@ -219,7 +218,7 @@ async function updateGistDb(content: string) {
   logger.info("🌐 Starting: GitHub Gist Update");
 
   const gistResult = await updateGist(config.UPDATE_GIST_ID, {
-    files: { [config.output.dbMinified]: { content } },
+    files: { [config.output.dbMinified.split("/")[1]]: { content } },
   });
 
   if (gistResult.error) {
