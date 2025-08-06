@@ -2,6 +2,9 @@ import { GithubRepository } from "~/sdk/github";
 import { ProcessedRepositories, RepositoryInfo } from "~/types";
 import { config } from "~/config";
 import { FormattedChunk } from "./readme/types";
+import { createLogger } from "~/logger";
+
+const logger = createLogger({ context: "repository processor" });
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -17,29 +20,21 @@ function formatRelativeTime(dateString: string): string {
   const now = new Date();
   const date = new Date(dateString);
   const diffMs = now.getTime() - date.getTime();
-  
+
   // Calculate days directly from milliseconds to avoid compounding errors
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   // For months and years, use actual calendar calculations for precision
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth();
   const dateYear = date.getFullYear();
   const dateMonth = date.getMonth();
-  
+
   // Calculate month difference accounting for year rollover
   const diffMonths = (nowYear - dateYear) * 12 + (nowMonth - dateMonth);
-  
+
   const diffYears = Math.floor(diffMonths / 12);
 
-  // if (diffSeconds < 60) {
-  //   return "less than a minute ago";
-  // } else if (diffMinutes < 60) {
-  //   return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
-  // } else if (diffHours < 24) {
-  //   return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
-  // } else if (diffDays < 30) {
-  //   return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
   if (diffDays < 30) {
     return diffDays <= 7
       ? "this week"
@@ -57,8 +52,8 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function processRepositories(
-  repositories: GithubRepository[],
-  installationData: Record<
+  repositories: Map<string, GithubRepository>,
+  installationData: Map<
     string,
     { installations: FormattedChunk[]; readmePath: string }
   >,
@@ -66,7 +61,7 @@ export function processRepositories(
   const processedRepositories = {
     meta: {
       version: 2,
-      total_count: repositories.length,
+      total_count: 0, // Will be incremented for each processed repository
       installable_count: 0,
       crawled_at: Date.now(),
       crawled_in_sec: 0, // will be filled later
@@ -79,10 +74,25 @@ export function processRepositories(
     items: [],
   } as ProcessedRepositories;
 
-  for (const repo of repositories) {
-    const [author, name] = repo.full_name.split("/");
+  for (const [full_name, installData] of installationData.entries()) {
+    const repo = repositories.get(full_name);
+    if (!repo) {
+      logger.error(
+        `❌ Repository ${full_name} is found in installations, but not in repositories`,
+      );
+      continue;
+    }
+
+    const { readmePath, installations } = installData;
+    if (!readmePath || !installations) {
+      logger.error(
+        `❌ Repository ${full_name} have no readmePath or installations`,
+      );
+      continue;
+    }
+
+    const [author, name] = full_name.split("/");
     const pushedAtUnix = new Date(repo.pushed_at).getTime();
-    const repoInstallData = installationData?.[repo.full_name];
 
     const item: RepositoryInfo = {
       full_name: repo.full_name,
@@ -91,7 +101,7 @@ export function processRepositories(
       html_url: repo.html_url,
       description: repo.description ?? "",
       homepage: repo.homepage ?? "",
-      created_at: Math.floor(new Date(repo.created_at).getTime() / 1000),
+      created_at: new Date(repo.created_at).getTime(),
 
       topics: repo.topics,
       tags: repo.topics
@@ -116,7 +126,8 @@ export function processRepositories(
       pretty_pushed_at: formatRelativeTime(repo.pushed_at),
     };
 
-    processedRepositories.meta.installable_count += item.install ? 1 : 0;
+    processedRepositories.meta.installable_count +=
+      installations.length > 0 ? 1 : 0;
     // Track maximum lengths
     processedRepositories.meta.max_full_name_length = Math.max(
       processedRepositories.meta.max_full_name_length,
@@ -139,17 +150,10 @@ export function processRepositories(
       item.pretty_pushed_at.length,
     );
 
-    if (!repoInstallData) {
-      processedRepositories.items.push(item);
-      continue;
-    }
-    const { readmePath, installations } = repoInstallData;
-    if (readmePath) {
-      item.readme = readmePath;
-    }
+    item.readme = readmePath;
 
     // Apply installation config during processing
-    if (installations?.length) {
+    if (installations.length) {
       const lazy = installations.find(
         (option) => option.pluginManager === "lazy.nvim",
       );
@@ -179,6 +183,7 @@ export function processRepositories(
     }
 
     processedRepositories.items.push(item);
+    processedRepositories.meta.total_count++;
   }
 
   return processedRepositories;

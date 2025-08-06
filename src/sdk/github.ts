@@ -1,6 +1,7 @@
 import axios from "axios";
 import { config } from "../config";
 import { createLogger } from "../logger";
+import { utils } from "~/utils";
 
 export type SearchOptions = {
   yearStart?: Date;
@@ -84,7 +85,7 @@ export async function getRepositoryReadme(
 
   // Try different combinations of branches and filenames
   const branches = ["main", "master"];
-  const filenames = ["README.md", "readme.md", "Readme.md", "store.md"];
+  const filenames = config.crawler.readmes;
 
   const errors: string[] = [];
   for (const branch of branches) {
@@ -97,6 +98,12 @@ export async function getRepositoryReadme(
         logger.info(
           `Done fetching README for ${repo} from ${branch}/${filename}`,
         );
+        if (filename.endsWith(".adoc")) {
+          return {
+            data: utils.adocToMarkdown(content),
+            readmePath: `${branch}/${filename}`,
+          };
+        }
         return { data: content, readmePath: `${branch}/${filename}` };
       } catch (error) {
         errors.push(error instanceof Error ? error.message : "Unknown error");

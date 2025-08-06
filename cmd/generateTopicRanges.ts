@@ -2,6 +2,7 @@ import * as fs from "fs/promises";
 import { searchRepositories } from "../src/sdk/github";
 import { config } from "../src/config";
 import { createLogger } from "../src/logger";
+import path from "path";
 
 const logger = createLogger({ context: "topic ranges generator" });
 
@@ -54,32 +55,27 @@ async function getTopicRangeCount(
   topic: string,
   dateRange: { from: Date; to: Date; label: string },
 ): Promise<number> {
-  try {
-    // Calculate last update cutoff date to match crawler filter
-    const lastUpdateCutoff = new Date();
-    lastUpdateCutoff.setDate(
-      lastUpdateCutoff.getDate() - config.crawler.lastUpdateAllowedInDays,
+  // Calculate last update cutoff date to match crawler filter
+  const lastUpdateCutoff = new Date();
+  lastUpdateCutoff.setDate(
+    lastUpdateCutoff.getDate() - config.crawler.lastUpdateAllowedInDays,
+  );
+
+  const result = await searchRepositories(1, 1, {
+    topic,
+    yearStart: dateRange.from,
+    yearEnd: dateRange.to,
+    lastUpdateAfter: lastUpdateCutoff,
+  });
+
+  if ("error" in result) {
+    logger.error(
+      `Failed to fetch data for ${topic} ${dateRange.label}: ${result.error}`,
     );
-
-    const result = await searchRepositories(1, 1, {
-      topic,
-      yearStart: dateRange.from,
-      yearEnd: dateRange.to,
-      lastUpdateAfter: lastUpdateCutoff,
-    });
-
-    if ("error" in result) {
-      logger.error(
-        `Failed to fetch data for ${topic} ${dateRange.label}: ${result.error}`,
-      );
-      return 0;
-    }
-
-    return result.data.total_count;
-  } catch (error) {
-    logger.error(`Error fetching ${topic} ${dateRange.label}: ${error}`);
-    throw error;
+    return 0;
   }
+
+  return result.data.total_count;
 }
 
 /**
@@ -102,7 +98,16 @@ async function main() {
 
   // Output as JSON
   console.log(JSON.stringify(results, null, 2));
-  fs.writeFile(config.output.topicRanges, JSON.stringify(results, null, 2));
+
+  const dir = path.dirname(config.output.topicRanges);
+  const stats = await fs.stat(dir).catch((error) => ({ error }));
+  if ("error" in stats || !stats.isDirectory()) {
+    await fs.mkdir(dir);
+  }
+  await fs.writeFile(
+    config.output.topicRanges,
+    JSON.stringify(results, null, 2),
+  );
 }
 
 // Run the script

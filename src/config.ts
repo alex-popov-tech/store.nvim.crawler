@@ -53,7 +53,7 @@ export const config = {
   },
 
   crawler: {
-    // pull all plugins which have any of these topics
+    readmes: ["README.md", "readme.md", "Readme.md", "README.adoc", "store.md"],
     topics: [
       "nvim-plugin",
       "nvim-plugins",

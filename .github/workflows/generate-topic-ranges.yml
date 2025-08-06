@@ -22,3 +22,11 @@ jobs:
           LOG_LEVEL: info
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
         run: npm run generateTopicRanges
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: topic-ranges
+          path: |
+            output/topic_ranges.json
+          retention-days: 2

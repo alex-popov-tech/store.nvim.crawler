@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { crawl } from "~/crawlers";
 import { getRepositoryReadme, GithubRepository, updateGist } from "~/sdk";
 import { processors } from "~/processors";
@@ -17,38 +15,38 @@ const logger = createLogger({ context: "main" });
  * Step 1: Crawl repositories from all sources
  */
 async function crawlRepositories(): Promise<
-  { data: GithubRepository[] } | { error: any }
+  { data: Map<string, GithubRepository> } | { error: any }
 > {
   logger.info("🔍 Starting: Repository Discovery");
 
-  try {
-    const crawlResult = await crawl();
-    if ("error" in crawlResult) {
-      return { error: crawlResult.error };
-    }
-
-    const filteredRepos = Array.from(crawlResult.data.values()).filter(
-      (repo) => !config.REPOSITORIES_BLACKLIST.some((bl) => bl(repo)),
-    );
-
-    logger.info(
-      `✅ Discovered ${filteredRepos.length} repositories after filtering`,
-    );
-    logger.info("Repository discovery completed");
-
-    return { data: filteredRepos };
-  } catch (error) {
-    logger.error(`❌ Failed to crawl repositories: ${error}`);
-    return { error };
+  const crawlResult = await crawl();
+  if ("error" in crawlResult) {
+    return { error: crawlResult.error };
   }
+
+  for (const [full_name, repo] of crawlResult.data.entries()) {
+    if (config.REPOSITORIES_BLACKLIST.some((bl) => bl(repo))) {
+      logger.info(
+        `❌ Removing ${full_name} from repositories because of blacklist`,
+      );
+      crawlResult.data.delete(full_name);
+    }
+  }
+
+  logger.info(
+    `✅ Discovered ${crawlResult.data.size} repositories after filtering`,
+  );
+  logger.info("Repository discovery completed");
+
+  return { data: crawlResult.data };
 }
 
 /**
  * Step 2: Enhance repositories info for store.nvim to consume on frontend ( pre-processing )
  */
 function processRepositoriesData(
-  repositories: GithubRepository[],
-  installationData: Record<
+  repositories: Map<string, GithubRepository>,
+  installationData: Map<
     string,
     { installations: FormattedChunk[]; readmePath: string }
   >,
@@ -70,10 +68,10 @@ function processRepositoriesData(
  * Step 3: Generate installation instructions
  */
 async function generateInstallationInstructions(
-  repositories: GithubRepository[],
+  repositories: Map<string, GithubRepository>,
 ): Promise<
   | {
-      data: Record<
+      data: Map<
         string,
         { installations: FormattedChunk[]; readmePath: string }
       >;
@@ -82,52 +80,54 @@ async function generateInstallationInstructions(
 > {
   logger.info("📖 Starting: Installation Data Extraction");
 
-  const installData: Record<
+  const installData: Map<
     string,
     { installations: FormattedChunk[]; readmePath: string }
-  > = {};
+  > = new Map<
+    string,
+    { installations: FormattedChunk[]; readmePath: string }
+  >();
 
   // Create a limit function with the configured concurrency
   const limit = pLimit(config.crawler.concurrentRequestsLimit);
 
-  logger.info(
-    `Processing ${repositories.length} repositories with concurrency limit of ${config.crawler.concurrentRequestsLimit}`,
-  );
-
   let readmeProcessed = 0;
   let readmeProcessedEmpty = 0;
   let readmeNotfound = 0;
-  const promises = repositories.map((repo) =>
-    limit(async () => {
-      const readme = await getRepositoryReadme(repo.full_name);
-      if ("error" in readme) {
-        logger.warn(
-          `Cannot fetch README for ${repo.full_name} because of\n${readme.error}`,
-        );
-        readmeNotfound++;
-        return;
-      }
+  const promises: Promise<void>[] = [];
 
-      const installations = processors.readme(repo.full_name, readme.data);
-      if (!installations.length) {
-        logger.warn(`No installations found for ${repo.full_name}`);
-        readmeProcessedEmpty++;
-        return;
-      }
+  for (const repo of repositories.values()) {
+    promises.push(
+      limit(async () => {
+        const readmeResult = await getRepositoryReadme(repo.full_name);
+        if ("error" in readmeResult) {
+          logger.warn(
+            `Cannot fetch README for ${repo.full_name} because of\n${readmeResult.error}`,
+          );
+          readmeNotfound++;
+          return;
+        }
+        const { data, readmePath } = readmeResult;
 
-      readmeProcessed++;
-      installData[repo.full_name] = {
-        installations,
-        readmePath: readme.readmePath,
-      };
-    }),
-  );
+        const installations = processors.readme(repo.full_name, data);
+        if (!installations.length) {
+          logger.warn(`No installations found for ${repo.full_name}`);
+          readmeProcessedEmpty++;
+        } else {
+          readmeProcessed++;
+        }
 
+        installData.set(repo.full_name, { installations, readmePath });
+      }),
+    );
+  }
   // Wait for all processing to complete
   await Promise.all(promises);
 
-  logger.info(`✅ Processed ${repositories.length} repositories`);
-  logger.info(`❓ ${readmeNotfound} README's not found`);
+  logger.info(`✅ Processed ${repositories.size} repositories`);
+  logger.info(
+    `❓ ${readmeNotfound} README's not found, and will be omitted in db`,
+  );
   logger.info(`❔ ${readmeProcessedEmpty} have no installations in README`);
   logger.info(
     `✨ ${readmeProcessed} README's processed successfully with installation instructions`,
@@ -164,7 +164,7 @@ function sortRepositories(repositories: ProcessedRepositories): void {
  */
 async function saveToFilesystem(args: {
   db: ProcessedRepositories;
-  install: Record<
+  install: Map<
     string,
     { readmePath: string; installations: FormattedChunk[] }
   >;
@@ -178,8 +178,8 @@ async function saveToFilesystem(args: {
     const installpath = path.resolve(".", config.output.install);
 
     const dir = path.dirname(dbpath);
-    const stats = await stat(dir);
-    if (!stats.isDirectory()) {
+    const stats = await stat(dir).catch((error) => ({ error }));
+    if ("error" in stats || !stats.isDirectory()) {
       await mkdir(dir);
     }
 
@@ -189,7 +189,14 @@ async function saveToFilesystem(args: {
     await writeFile(dbMinifiedpath, args.dbMinified);
     logger.info(`✅ DB minified written to ${dbMinifiedpath}`);
 
-    await writeFile(installpath, JSON.stringify(args.install, null, 2));
+    // Convert Map to array format for install.json
+    const installArray = Array.from(args.install.entries()).map(([full_name, data]) => ({
+      full_name,
+      readme: data.readmePath,
+      installations: data.installations
+    }));
+    
+    await writeFile(installpath, JSON.stringify(installArray, null, 2));
     logger.info(`✅ Installation data written to ${installpath}`);
 
     logger.info("Filesystem save completed");
