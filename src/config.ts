@@ -15,6 +15,9 @@ const env = cleanEnv(process.env, {
 export const config = {
   ...env,
   REPOSITORIES_BLACKLIST: [
+    // this bad boy is crawled separately
+    (r) => r.full_name.includes("awesome-neovim"),
+
     // random repositories which for some reason have
     // topics like 'neovim-plugin' and get crawled
     (r) => r.full_name.trim().endsWith("dotfiles"),

@@ -66,6 +66,8 @@ export function processRepositories(
       crawled_at: Date.now(),
       crawled_in_sec: 0, // will be filled later
       max_full_name_length: 0,
+      max_name_length: 0,
+      max_author_length: 0,
       max_pretty_stargazers_length: 0,
       max_pretty_forks_length: 0,
       max_pretty_issues_length: 0,
@@ -132,6 +134,14 @@ export function processRepositories(
     processedRepositories.meta.max_full_name_length = Math.max(
       processedRepositories.meta.max_full_name_length,
       item.full_name.length,
+    );
+    processedRepositories.meta.max_name_length = Math.max(
+      processedRepositories.meta.max_name_length,
+      item.name.length,
+    );
+    processedRepositories.meta.max_author_length = Math.max(
+      processedRepositories.meta.max_author_length,
+      item.author.length,
     );
     processedRepositories.meta.max_pretty_stargazers_length = Math.max(
       processedRepositories.meta.max_pretty_stargazers_length,

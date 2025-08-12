@@ -39,6 +39,8 @@ export type ProcessedRepositories = {
     crawled_at: number;
     crawled_in_sec: number;
     max_full_name_length: number;
+    max_name_length: number;
+    max_author_length: number;
     max_pretty_stargazers_length: number;
     max_pretty_forks_length: number;
     max_pretty_issues_length: number;
