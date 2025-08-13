@@ -1,6 +1,8 @@
-import { cleanEnv, str, bool } from "envalid";
+import { cleanEnv, str } from "envalid";
 import { GithubRepository } from "./sdk";
+import * as dotenv from "dotenv";
 
+dotenv.config();
 const env = cleanEnv(process.env, {
   AUTH_TOKEN: str(),
 

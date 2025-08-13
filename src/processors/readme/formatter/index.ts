@@ -63,7 +63,7 @@ function formatLuaCode(code: string): FormatResult {
     }
 
     // Then format with lua-fmt
-    const formatted = formatText(wrappedCode);
+    const formatted = formatText(wrappedCode, { lineWidth: 30 });
 
     // Remove the "return " prefix after formatting
     const finalFormatted = formatted.replace(/^return\s+/, "").trim();
