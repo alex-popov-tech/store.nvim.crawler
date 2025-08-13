@@ -1,8 +1,8 @@
 name: Repository Crawler
 on:
   schedule:
-    # Run daily at 3 AM UTC
-    - cron: '0 3 * * *'
+    # Run every 8 hours (at 0:00, 8:00, and 16:00 UTC)
+    - cron: '0 0,8,16 * * *'
   workflow_dispatch: # Allow manual triggering
 jobs:
   crawl:
