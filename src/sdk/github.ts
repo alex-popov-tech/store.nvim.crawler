@@ -2,6 +2,7 @@ import axios from "axios";
 import { config } from "../config";
 import { createLogger } from "../logger";
 import { utils } from "~/utils";
+import { Repository } from "../pipeline/types";
 
 export type SearchOptions = {
   yearStart?: Date;
@@ -23,7 +24,18 @@ export type GithubRepository = {
   pushed_at: string;
   topics: string[];
   archived: boolean;
+  default_branch: string;
 };
+
+export type GithubTreeItem = {
+  path: string;
+  mode: string;
+  type: "blob" | "tree";
+  sha: string;
+  size?: number;
+  url: string;
+};
+
 
 type GithubSearchRepositories = {
   total_count: number;
@@ -39,6 +51,23 @@ type GistUpdatePayload = {
   };
 };
 
+type GistFile = {
+  filename: string;
+  type: string;
+  language: string;
+  raw_url: string;
+  size: number;
+  truncated: boolean;
+  content: string;
+};
+
+type GistResponse = {
+  id: string;
+  files: {
+    [filename: string]: GistFile;
+  };
+};
+
 const logger = createLogger({ context: "github-client" });
 
 const client = axios.create({
@@ -46,16 +75,93 @@ const client = axios.create({
   headers: {
     "User-Agent": "awesome-neovim-crawler",
     Accept: "application/vnd.github.v3+json",
-    Authorization: `Bearer ${config.AUTH_TOKEN}`,
+    Authorization: `Bearer ${config.GITHUB_TOKEN}`,
   },
 });
+
+// Rate-limit aware axios wrapper
+const rateLimitClient = {
+  get<T = any>(url: string, config?: any): Promise<any> {
+    return rateLimitClient.request({ method: 'GET', url, ...config });
+  },
+
+  patch<T = any>(url: string, data?: any, config?: any): Promise<any> {
+    return rateLimitClient.request({ method: 'PATCH', url, data, ...config });
+  },
+
+  async request(config: any): Promise<any> {
+    let response;
+
+    try {
+      response = await client.request(config);
+    } catch (error: any) {
+      if (error.response) {
+        response = await rateLimitClient.handleRateLimit(error.response, () => client.request(config));
+        if (response !== error.response) {
+          return response;
+        }
+      }
+      throw error;
+    }
+
+    response = await rateLimitClient.handleRateLimit(response, () => client.request(config));
+    return response;
+  },
+
+  async handleRateLimit(response: any, retryRequest: () => Promise<any>): Promise<any> {
+    const headers = response.headers;
+    const remaining = parseInt(headers['x-ratelimit-remaining'] || '0');
+    const reset = headers['x-ratelimit-reset'];
+    const resource = headers['x-ratelimit-resource'] || 'core';
+
+    // Enhanced logging for all search API requests
+    if (resource === 'search') {
+      logger.info(`🔍 Search API: ${remaining} requests remaining (status: ${response.status})`);
+    }
+
+    if (response.status === 403 || response.status === 429) {
+      // Check if we're hitting rate limits
+      if (remaining < 100 && reset) {
+        const resetTimestamp = parseInt(reset) * 1000;
+        const now = Date.now();
+        const randomBuffer = 1000 + Math.random() * 4000; // 1-5 seconds
+        const waitTime = resetTimestamp - now + randomBuffer;
+
+        if (waitTime > 0) {
+          const resetDate = new Date(resetTimestamp);
+          logger.warn(`🚨 GitHub rate limit hit for ${resource} (${remaining} remaining). Waiting ${Math.round(waitTime/1000)}s until ${resetDate.toISOString()}`);
+
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+
+          logger.info(`✅ Rate limit reset for ${resource}, retrying request`);
+          return retryRequest();
+        }
+      }
+    }
+
+    // Log warnings for low rate limits on successful requests
+    if (response.status >= 200 && response.status < 300) {
+      if (resource === 'search' && remaining <= 10) {
+        const reset = response.headers['x-ratelimit-reset'];
+        const resetDate = new Date(parseInt(reset) * 1000);
+        logger.warn(`⚠️  Search API rate limit VERY low: ${remaining} requests remaining until ${resetDate.toISOString()}`);
+      } else if (resource === 'core' && remaining < 200) {
+        const reset = response.headers['x-ratelimit-reset'];
+        const resetDate = new Date(parseInt(reset) * 1000);
+        logger.warn(`⚠️  Core API rate limit low: ${remaining} requests remaining until ${resetDate.toISOString()}`);
+      }
+    }
+
+    return response;
+  }
+};
 
 export async function getRepository(
   fullName: string,
 ): Promise<{ data: GithubRepository | null; error: any }> {
   try {
     logger.info(`Starting: Fetching repository ${fullName}`);
-    const response = await client.get<GithubRepository>(`/repos/${fullName}`);
+    const response = await rateLimitClient.get<GithubRepository>(`/repos/${fullName}`);
     logger.info(`Done fetching repository ${fullName}`);
     return { data: response.data, error: null };
   } catch (error) {
@@ -79,141 +185,197 @@ export async function getRepository(
 }
 
 export async function getRepositoryReadme(
-  repo: string,
+  repository: Repository,
 ): Promise<{ data: string; readmePath: string } | { error: string }> {
-  logger.info(`Starting: README fetch for ${repo}`);
+  const { full_name, branch } = repository;
+  logger.info(`Starting: README fetch for ${full_name}`);
 
-  // Try different combinations of branches and filenames
-  const branches = ["main", "master"];
-  const filenames = config.crawler.readmes;
+  const filenames = config.pipeline.crawler.readmes;
 
-  const errors: string[] = [];
-  for (const branch of branches) {
-    for (const filename of filenames) {
-      const url = `https://raw.githubusercontent.com/${repo}/${branch}/${filename}`;
+  for (const filename of filenames) {
+    const url = `https://raw.githubusercontent.com/${full_name}/${branch}/${filename}`;
 
-      try {
-        const response = await axios.get(url);
-        const content = response.data;
-        logger.info(
-          `Done fetching README for ${repo} from ${branch}/${filename}`,
-        );
-        if (filename.endsWith(".adoc")) {
-          return {
-            data: utils.adocToMarkdown(content),
-            readmePath: `${branch}/${filename}`,
-          };
-        }
-        return { data: content, readmePath: `${branch}/${filename}` };
-      } catch (error) {
-        errors.push(error instanceof Error ? error.message : "Unknown error");
+    const response = await axios.get(url, { validateStatus: () => true });
+
+    if (response.status === 200) {
+      const content = response.data;
+      logger.info(
+        `Done fetching README for ${full_name} from ${branch}/${filename}`,
+      );
+      if (filename.endsWith(".adoc")) {
+        return {
+          data: utils.adocToMarkdown(content),
+          readmePath: `${branch}/${filename}`,
+        };
       }
+      return { data: content, readmePath: `${branch}/${filename}` };
     }
   }
 
   return {
-    error: `README not found for ${repo} in any of the tried locations, errors: ${errors.join("\n")}`,
+    error: `README not found for ${full_name} in branch ${branch}`,
   };
 }
 
-export async function searchRepositories(
-  page: number,
-  perPage: number = 100,
-  options: SearchOptions,
-): Promise<{ data: GithubSearchRepositories } | { error: any }> {
-  const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-  let query = `topic:${options.topic}`;
+export async function drainSearchRepositories(
+  query: string,
+): Promise<GithubRepository[]> {
+  const perPage = 100;
 
-  logger.info(`Requesting page ${page}, perPage ${perPage}`);
-
-  if (options.yearStart && options.yearEnd) {
-    const startDate = options.yearStart.toISOString().split("T")[0];
-    const endDate = options.yearEnd.toISOString().split("T")[0];
-    query += ` created:${startDate}..${endDate}`;
-  } else if (options.yearStart) {
-    const startDate = options.yearStart.toISOString().split("T")[0];
-    query += ` created:>=${startDate}`;
-  } else if (options.yearEnd) {
-    const endDate = options.yearEnd.toISOString().split("T")[0];
-    query += ` created:<=${endDate}`;
-  }
-
-  // Add last update filter to exclude dead plugins
-  if (options.lastUpdateAfter) {
-    const lastUpdateDate = options.lastUpdateAfter.toISOString().split("T")[0];
-    query += ` pushed:>${lastUpdateDate}`;
-  }
+  logger.info(`Starting to drain query: "${query}"`);
 
   try {
-    const response = await client.get<GithubSearchRepositories>(
+    // Step 1: Get first page to discover pagination info
+    const firstResponse = await rateLimitClient.get<GithubSearchRepositories>(
       "/search/repositories",
       {
         params: {
           q: query,
           per_page: perPage,
-          page: page,
+          page: 1,
           sort: "updated",
           order: "desc",
         },
       },
     );
 
-    logger.info("Rate limiting: waiting 5 seconds");
-    await sleep(1000 * 5);
+    const { items: firstPageItems, total_count } = firstResponse.data;
+
+    // Hard fail if we hit the GitHub API 1000 result limit
+    if (total_count >= 1000) {
+      const errorMsg = `Query "${query}" returned ${total_count} repositories, exceeding GitHub's 1000 result limit. Please refine the query.`;
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
 
     logger.info(
-      `Success - got ${response.data.items.length} items, total_count: ${response.data.total_count}`,
+      `Fetched ${firstPageItems.length} repos, ${firstPageItems.length}/${total_count} total for "${query}"`,
     );
-    return { data: response.data };
+
+    // Early return if only one page
+    if (firstPageItems.length < perPage || firstPageItems.length === 0) {
+      logger.info(`Completed draining "${query}": found ${firstPageItems.length} repositories`);
+      return firstPageItems;
+    }
+
+    // Step 2: Calculate remaining pages needed and fetch sequentially
+    const totalPages = Math.ceil(Math.min(total_count, 1000) / perPage);
+    const remainingPages = Array.from({length: totalPages - 1}, (_, i) => i + 2);
+
+    logger.info(
+      `Query "${query}" has ${totalPages} pages total, fetching ${remainingPages.length} remaining pages sequentially`,
+    );
+
+    // Step 3: Sequential fetch all remaining pages
+    const pageResults: GithubRepository[][] = [];
+
+    for (const page of remainingPages) {
+      logger.debug(`Fetching page ${page} for "${query}"`);
+      const response = await rateLimitClient.get<GithubSearchRepositories>(
+        "/search/repositories",
+        {
+          params: {
+            q: query,
+            per_page: perPage,
+            page: page,
+            sort: "updated",
+            order: "desc",
+          },
+        },
+      );
+
+      const { items } = response.data;
+      logger.debug(`Fetched page ${page}: ${items.length} repos for "${query}"`);
+      pageResults.push(items);
+    }
+
+    // Step 4: Combine all results
+    const allRepos = [firstPageItems, ...pageResults].flat();
+
+    logger.info(`Completed draining "${query}": found ${allRepos.length} repositories`);
+    return allRepos;
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error(`Repository search failed for query "${query}": ${errorMessage}`);
+    throw error;
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function getRepositoryTree(
+  fullName: string,
+  branch: string,
+): Promise<{ data: GithubTreeItem[] } | { error: any }> {
+  try {
+    logger.info(`Starting: Fetching tree for ${fullName}@${branch}`);
+    const response = await rateLimitClient.get(
+      `/repos/${fullName}/git/trees/${branch}?recursive=1`
+    );
+    logger.info(`Done fetching tree for ${fullName}@${branch}`);
+    return { data: response.data.tree || [] };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    logger.error(
-      `Repository search failed for page ${page}/${perPage} with query "${query}": ${errorMessage}`,
-    );
-
-    // Add axios-specific error details
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as {
-        response?: { status?: number; statusText?: string; data?: any };
-      };
-      if (axiosError.response) {
-        logger.error(
-          `HTTP ${axiosError.response.status} ${axiosError.response.statusText}`,
-        );
-        logger.info(
-          `Response body: ${JSON.stringify(axiosError.response.data, null, 2)}`,
-        );
-      }
-    }
-
+    logger.error(`Failed to fetch tree for ${fullName}@${branch}: ${errorMessage}`);
     return { error };
   }
 }
 
+export async function getGist(gistId: string): Promise<{ data: GistResponse } | { error: any }> {
+  logger.info(`Starting: gist ${gistId} fetch`);
+  const response = await rateLimitClient.get<GistResponse>(`/gists/${gistId}`, { validateStatus: () => true });
+
+  if (response.status >= 200 && response.status < 300) {
+    logger.info(`Fetched gist ${gistId}`);
+    return { data: response.data };
+  }
+
+  logger.error(`Failed to fetch gist ${gistId}: HTTP ${response.status}`);
+  if (response.status === 404) {
+    logger.error(`Gist ${gistId} not found (404)`);
+  } else if (response.status === 403) {
+    logger.error(`Access forbidden for gist ${gistId} (403) - check token permissions`);
+  }
+
+  return { error: `HTTP ${response.status}: ${response.statusText}` };
+}
+
+export async function getRawGistContent(rawUrl: string): Promise<{ content: string } | { error: any }> {
+  logger.info(`Starting: raw gist fetch from ${rawUrl}`);
+  const response = await axios.get(rawUrl, {
+    validateStatus: () => true,
+    timeout: 30000,
+    responseType: 'text'
+  });
+
+  if (response.status >= 200 && response.status < 300) {
+    logger.info(`Fetched raw gist content, size: ${response.data.length} bytes`);
+    return { content: response.data };
+  }
+
+  logger.error(`Failed to fetch raw gist: HTTP ${response.status}`);
+  return { error: `HTTP ${response.status}: ${response.statusText}` };
+}
+
 export async function updateGist(gistId: string, payload: GistUpdatePayload) {
-  try {
-    logger.info(`Starting: gist ${gistId} update`);
-    await client.patch(`/gists/${gistId}`, payload);
+  logger.info(`Starting: gist ${gistId} update`);
+  const response = await rateLimitClient.patch(`/gists/${gistId}`, payload, { validateStatus: () => true });
+
+  if (response.status >= 200 && response.status < 300) {
     logger.info(`Updated gist ${gistId}`);
     return { error: null };
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    logger.error(`Failed to update gist ${gistId}: ${errorMessage}`);
-
-    if (error && typeof error === "object" && "response" in error) {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError.response?.status === 404) {
-        logger.error(`Gist ${gistId} not found (404)`);
-      } else if (axiosError.response?.status === 403) {
-        logger.error(
-          `Access forbidden for gist ${gistId} (403) - check token permissions`,
-        );
-      }
-    }
-
-    return { error };
   }
+
+  logger.error(`Failed to update gist ${gistId}: HTTP ${response.status}`);
+  if (response.status === 404) {
+    logger.error(`Gist ${gistId} not found (404)`);
+  } else if (response.status === 403) {
+    logger.error(`Access forbidden for gist ${gistId} (403) - check token permissions`);
+  }
+
+  return { error: `HTTP ${response.status}: ${response.statusText}` };
 }

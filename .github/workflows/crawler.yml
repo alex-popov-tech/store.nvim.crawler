@@ -1,8 +1,8 @@
 name: Repository Crawler
 on:
   schedule:
-    # Run every 8 hours (at 0:00, 8:00, and 16:00 UTC)
-    - cron: '0 0,8,16 * * *'
+    # Run every 2 hours (0:00, 2:00, 4:00, … UTC)
+    - cron: '0 */2 * * *'
   workflow_dispatch: # Allow manual triggering
 jobs:
   crawl:
@@ -28,9 +28,5 @@ jobs:
         if: always()
         with:
           name: crawling-results
-          path: |
-            output/db.json
-            output/install.json
-            output/db_minified.json
-            output/log
+          path: output/
           retention-days: 3
