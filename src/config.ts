@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 const env = cleanEnv(process.env, {
-  GITHUB_TOKEN: str(),
+  GITHUBB_TOKEN: str(),
   GITLAB_TOKEN: str(),
 
   LOG_LEVEL: str({

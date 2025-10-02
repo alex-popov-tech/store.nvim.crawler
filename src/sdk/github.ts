@@ -75,7 +75,7 @@ const client = axios.create({
   headers: {
     "User-Agent": "awesome-neovim-crawler",
     Accept: "application/vnd.github.v3+json",
-    Authorization: `Bearer ${config.GITHUB_TOKEN}`,
+    Authorization: `Bearer ${config.GITHUBB_TOKEN}`,
   },
 });
 
