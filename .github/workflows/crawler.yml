@@ -20,8 +20,8 @@ jobs:
       - name: Run crawler
         env:
           LOG_LEVEL: info
-          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
-          UPDATE_GIST_ID: ${{ vars.UPDATE_GIST_ID }}
+          GITHUBB_TOKEN: ${{ secrets.GITHUBB_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
         run: npm run crawling
       - name: Upload crawl results
         uses: actions/upload-artifact@v4
