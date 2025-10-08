@@ -139,7 +139,7 @@ export const config = {
       },
     },
     installator: {
-      cache: false,
+      cache: true,
       // for updating through api
       cacheGistId: "d72a6787a7a009534dfee7e230827af2",
       // for fetching, avoiding github api transmission limits
