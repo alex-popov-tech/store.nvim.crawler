@@ -9,7 +9,7 @@ export function generateVimPackAddForDependency(dependencyName: string) {
       ? `https://github.com/${cleanName}`
       : cleanName;
 
-  return `vim.pack.add({ { src = '${url}' } })`;
+  return `vim.pack.add({'${url}'})`;
 }
 
 export function generateVimPackConfig(
@@ -20,7 +20,7 @@ export function generateVimPackConfig(
   const depLines = dependencies.map((dep) =>
     generateVimPackAddForDependency(dep),
   );
-  const mainLine = `vim.pack.add({ { src = '${repository.url}' } })`;
+  const mainLine = `vim.pack.add({'${repository.url}'})`;
 
   const lines = [...depLines, mainLine, ...(setupCall ? ["", setupCall] : [])];
 
