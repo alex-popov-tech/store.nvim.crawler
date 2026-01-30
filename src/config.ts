@@ -58,9 +58,11 @@ export const config = {
         "nvim-plugin": [
           "topic:nvim-plugin created:2017-01-01..2023-12-31 archived:false", // ~431 repos
           "topic:nvim-plugin created:2024-01-01..2025-12-31 archived:false", // ~555 repos
+          "topic:nvim-plugin created:>=2026-01-01 archived:false", // future repos
         ],
         "nvim-plugins": [
           "topic:nvim-plugins created:2018-01-01..2025-12-31 archived:false", // ~63 repos
+          "topic:nvim-plugins created:>=2026-01-01 archived:false", // future repos
         ],
         "neovim-plugin": [
           "topic:neovim-plugin created:2013-01-01..2021-06-30 archived:false", // ~266 repos
@@ -69,24 +71,31 @@ export const config = {
           "topic:neovim-plugin created:2023-01-01..2023-12-31 archived:false", // ~614 repos
           "topic:neovim-plugin created:2024-01-01..2024-06-30 archived:false", // ~470 repos
           "topic:neovim-plugin created:2024-07-01..2024-12-31 archived:false", // ~459 repos
-          "topic:neovim-plugin created:2025-01-01..2025-12-31 archived:false", // ~677 repos
+          "topic:neovim-plugin created:2025-01-01..2025-06-30 archived:false", // split from 2025
+          "topic:neovim-plugin created:2025-07-01..2025-12-31 archived:false", // split from 2025
+          "topic:neovim-plugin created:>=2026-01-01 archived:false", // future repos
         ],
         "neovim-plugins": [
           "topic:neovim-plugins created:2016-01-01..2025-12-31 archived:false", // ~168 repos
+          "topic:neovim-plugins created:>=2026-01-01 archived:false", // future repos
         ],
         "neovim-theme": [
           "topic:neovim-theme created:2014-01-01..2025-12-31 archived:false", // ~176 repos
+          "topic:neovim-theme created:>=2026-01-01 archived:false", // future repos
         ],
         "neovim-colorscheme": [
           "topic:neovim-colorscheme created:2014-01-01..2025-12-31 archived:false", // ~294 repos
+          "topic:neovim-colorscheme created:>=2026-01-01 archived:false", // future repos
         ],
         "neovim-and-plugin-topics": [
           "topic:neovim topic:plugin created:2013-01-01..2025-12-31 archived:false", // ~466 repos
+          "topic:neovim topic:plugin created:>=2026-01-01 archived:false", // future repos
         ],
       },
       gitlab: {
         "neovim-plugin": [
           "topic:neovim-plugin created:2020-01-01..2025-12-31 archived:false", // ~26 repos
+          "topic:neovim-plugin created:>=2026-01-01 archived:false", // future repos
         ],
       },
       // limit concurrent README fetch requests
@@ -99,7 +108,7 @@ export const config = {
       tagsToRemove: ["neovim", "nvim", "vim", "lua", "plugin"],
     },
     verificator: {
-      cache: true,
+      cache: false,
       concurrentRequestsLimit: 40,
       // for updating through api
       gistId: "8a47bb5ef75c59e80e94a3417c48d056",
