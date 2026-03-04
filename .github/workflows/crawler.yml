@@ -30,3 +30,17 @@ jobs:
           name: crawling-results
           path: output/
           retention-days: 3
+      - name: Create nightly release
+        run: |
+          TAG="nightly-$(date -u +%Y-%m-%d)"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" \
+            output/db_minified.json#db.json \
+            output/lazy_db_minified.json#lazy.nvim.json \
+            output/vimpack_db_minified.json#vim.pack.json \
+            output/verificator_cache.json#verification_cache.json \
+            output/installation_cache.json#installation_cache.json \
+            --title "Nightly $TAG" \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUBB_TOKEN }}

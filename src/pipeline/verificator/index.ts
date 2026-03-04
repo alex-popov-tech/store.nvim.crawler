@@ -1,25 +1,25 @@
 import fs from "fs";
 import pLimit from "p-limit";
-import { updateGist, getRawGistContent } from "~/sdk/github";
+import { fetchPublicContent } from "~/sdk/github";
 import { Repository } from "../types";
 import { config } from "~/config";
 import { createLogger } from "~/logger";
-import { VerificationCache, VerificationResult } from "./types";
+import { VerificationCache, VerificationCacheEntry, VerificationResult } from "./types";
 import { checkFileStructure } from "./file-structure";
 
 const logger = createLogger({ context: "verificator" });
 
-async function pullCache(): Promise<Map<string, VerificationResult>> {
+async function pullCache(): Promise<Map<string, VerificationCacheEntry>> {
   if (config.pipeline.verificator.cache === false) {
     return new Map();
   }
 
-  logger.info("Pulling verification cache from raw gist URL");
-  const rawResult = await getRawGistContent(config.pipeline.verificator.rawUrl);
+  const cacheUrl = `${config.pipeline.output.releaseBaseUrl}/${config.pipeline.verificator.cacheFilename}`;
+  logger.info(`Pulling verification cache from ${cacheUrl}`);
+  const rawResult = await fetchPublicContent(cacheUrl);
   if ("error" in rawResult) {
-    throw new Error(
-      `Failed to fetch verification cache from raw URL: ${rawResult.error}`,
-    );
+    logger.warn(`Failed to fetch verification cache: ${rawResult.error}, starting with empty cache`);
+    return new Map();
   }
 
   if (!rawResult.content || rawResult.content.trim() === "") {
@@ -33,48 +33,34 @@ async function pullCache(): Promise<Map<string, VerificationResult>> {
   return new Map(Object.entries(cacheObject));
 }
 
-async function updateCache(
-  originalCache: Map<string, VerificationResult>,
-  verified: Map<string, VerificationResult>,
-  failed: Map<string, VerificationResult>,
-): Promise<void> {
-  const newCache = new Map(originalCache);
+function isCacheHasFreshRecord(
+  cache: Map<string, VerificationCacheEntry>,
+  repository: Repository,
+): boolean {
+  const cached = cache.get(repository.full_name);
+  if (!cached) return false;
 
-  for (const [fullName, result] of verified) {
-    newCache.set(fullName, result);
-  }
-  for (const [fullName, result] of failed) {
-    newCache.set(fullName, result);
-  }
+  // Legacy entry without timestamps — treat as stale
+  if (!cached.cached_at || !cached.updated_at) return false;
 
-  const newCacheContent = JSON.stringify(Object.fromEntries(newCache), null, 2);
+  const repoUpdated = new Date(repository.updated_at);
+  const cachedUpdated = new Date(cached.updated_at);
 
-  // Always write to filesystem for local review and CI artifacts
-  fs.writeFileSync(config.pipeline.verificator.output.verificationCache, newCacheContent);
-  logger.info("Updated verification cache file");
+  // Repo not updated since last cache — nothing changed
+  if (repoUpdated <= cachedUpdated) return true;
 
-  // Early return if cache size unchanged
-  if (originalCache.size === newCache.size) {
-    logger.info("Cache size unchanged, skipping gist push");
-    return;
-  }
+  // Repo was updated — check if cache is still within TTL
+  const ageInDays =
+    (Date.now() - new Date(cached.cached_at).getTime()) /
+    (24 * 60 * 60 * 1000);
+  return ageInDays < config.pipeline.verificator.cacheLifetimeInDays;
+}
 
-  logger.info("Cache size changed, pushing to gist");
-  const updateResult = await updateGist(config.pipeline.verificator.gistId, {
-    files: {
-      "verification_cache.json": {
-        content: newCacheContent,
-      },
-    },
-  });
+function updateCache(cache: Map<string, VerificationCacheEntry>): void {
+  const cacheContent = JSON.stringify(Object.fromEntries(cache), null, 2);
 
-  if (updateResult.error) {
-    throw new Error(
-      `Failed to update verification cache gist: ${updateResult.error}`,
-    );
-  }
-
-  logger.info("Successfully pushed verification cache to gist");
+  fs.writeFileSync(config.pipeline.verificator.output.verificationCache, cacheContent);
+  logger.info(`Updated verification cache file: ${config.pipeline.verificator.output.verificationCache}`);
 }
 
 /**
@@ -90,33 +76,27 @@ export async function verify(
 
   const cache = await pullCache();
   const results = new Map<string, Repository>();
-  const failed = new Map<string, VerificationResult>();
-  const verified = new Map<string, VerificationResult>();
 
-  // Prepare repositories that need verification (not in cache)
+  // Prepare repositories that need verification (stale or missing cache)
   const reposToVerify: Array<[string, Repository]> = [];
 
-  // First pass: check cache and collect repos that need verification
+  // First pass: check cache freshness and collect repos that need verification
   for (const [fullName, repo] of repositories) {
     logger.debug(`Processing repository: ${fullName}`);
 
-    // Check cache first
-    const cached = cache.get(fullName);
+    if (!isCacheHasFreshRecord(cache, repo)) {
+      logger.debug(`${fullName}: stale or missing cache, queuing for verification`);
+      reposToVerify.push([fullName, repo]);
+      continue;
+    }
 
-    if (cached?.isPlugin) {
+    const cached = cache.get(fullName)!;
+    if (cached.isPlugin) {
       results.set(fullName, repo);
       logger.debug(`${fullName}: cached as plugin`);
-      continue;
-    }
-
-    if (cached && !cached.isPlugin) {
+    } else {
       logger.debug(`${fullName}: cached as not-plugin - ${cached.reason}`);
-      continue;
     }
-
-    // Not in cache, add to verification queue
-    logger.debug(`${fullName}: not cached, queuing for verification`);
-    reposToVerify.push([fullName, repo]);
   }
 
   logger.info(
@@ -172,29 +152,36 @@ export async function verify(
   // Wait for all verifications to complete
   const verificationResults = await Promise.all(verificationPromises);
 
-  // Process results
+  // Process results and stamp cache entries
+  let newlyVerified = 0;
+  let newlyFailed = 0;
   for (const { fullName, repo, result, success } of verificationResults) {
+    cache.set(fullName, {
+      ...result,
+      updated_at: repo.updated_at,
+      cached_at: new Date().toISOString(),
+    });
     if (success && result.isPlugin) {
       results.set(fullName, repo);
-      verified.set(fullName, result);
+      newlyVerified++;
     } else {
-      failed.set(fullName, result);
+      newlyFailed++;
     }
   }
 
   // Update cache if we have new results
-  if (verified.size > 0 || failed.size > 0) {
-    await updateCache(cache, verified, failed);
+  if (newlyVerified > 0 || newlyFailed > 0) {
+    updateCache(cache);
   }
 
-  const cacheHits = repositories.size - verified.size - failed.size;
-  const cachePluginHits = results.size - verified.size;
+  const cacheHits = repositories.size - newlyVerified - newlyFailed;
+  const cachePluginHits = results.size - newlyVerified;
   const cacheNotPluginHits = cacheHits - cachePluginHits;
 
   logger.info(
     `Verification complete: ${repositories.size} total, ${cacheHits} cache hits ` +
       `(${cachePluginHits} plugins, ${cacheNotPluginHits} not-plugins), ` +
-      `${verified.size} newly verified, ${failed.size} newly failed, ` +
+      `${newlyVerified} newly verified, ${newlyFailed} newly failed, ` +
       `${results.size} final verified plugins`,
   );
 

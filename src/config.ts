@@ -16,20 +16,15 @@ export const config = {
   ...env,
   pipeline: {
     output: {
-      minifiedDbGistId: "92d1366bfeb168d767153a24be1475b5",
-      dbGistFilename: "db.json",
-      minifiedDbGistRawUrl:
-        "https://gist.githubusercontent.com/alex-popov-tech/92d1366bfeb168d767153a24be1475b5/raw/db.json",
+      releaseBaseUrl:
+        "https://github.com/alex-popov-tech/store.nvim.crawler/releases/latest/download",
+      dbFilename: "db.json",
+      lazyFilename: "lazy.nvim.json",
+      vimpackFilename: "vim.pack.json",
       db: "output/db.json",
       dbMinified: "output/db_minified.json",
-
-      vimpackDbGistId: "18a46177d6473e12bc2c854e2548f127",
-      vimpackGistFilename: "vim.pack.json",
       vimpackDb: "output/vimpack_db.json",
       vimpackDbMinified: "output/vimpack_db_minified.json",
-
-      lazyDbGistId: "6629a59e7910aa08b1aa5cdc0519b8b4",
-      lazyGistFilename: "lazy.nvim.json",
       lazyDb: "output/lazy_db.json",
       lazyDbMinified: "output/lazy_db_minified.json",
     },
@@ -108,13 +103,10 @@ export const config = {
       tagsToRemove: ["neovim", "nvim", "vim", "lua", "plugin"],
     },
     verificator: {
-      cache: false,
+      cache: true,
+      cacheLifetimeInDays: 30,
       concurrentRequestsLimit: 40,
-      // for updating through api
-      gistId: "8a47bb5ef75c59e80e94a3417c48d056",
-      // for fetching, avoiding github api transmission limits
-      rawUrl:
-        "https://gist.githubusercontent.com/alex-popov-tech/8a47bb5ef75c59e80e94a3417c48d056/raw/verification_cache.json",
+      cacheFilename: "verification_cache.json",
       blacklist: [
         (r) => r.full_name.endsWith("vimrc"),
 
@@ -149,18 +141,16 @@ export const config = {
     },
     installator: {
       cache: true,
-      // for updating through api
-      cacheGistId: "d72a6787a7a009534dfee7e230827af2",
-      // for fetching, avoiding github api transmission limits
-      cacheGistRawUrl:
-        "https://gist.githubusercontent.com/alex-popov-tech/d72a6787a7a009534dfee7e230827af2/raw/installation_cache.json",
+      cacheLifetimeInDays: 7,
+      cacheFilename: "installation_cache.json",
       cutter: {
         // max amount of context lines to be included in each chunk
         contextLinesBefore: 3,
         contextLinesAfter: 3,
       },
       output: {
-        install: "output/installator_cache.json",
+        installationCache: "output/installation_cache.json",
+        debug: "output/installator_debug.json",
       },
     },
   },

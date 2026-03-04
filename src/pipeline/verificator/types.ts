@@ -1,13 +1,19 @@
 /**
  * Verification result for a single repository
  */
-export type VerificationResult = 
+export type VerificationResult =
   | { isPlugin: true }
   | { isPlugin: false; reason: string };
 
 /**
- * Cache of verification results keyed by repository URL
- * Key: Full repository URL (e.g., "https://github.com/owner/repo")
- * Value: Verification result
+ * Cache entry with timestamps for TTL + update-based invalidation
  */
-export type VerificationCache = Record<string, VerificationResult>;
+export type VerificationCacheEntry = {
+  updated_at: string;   // repo's updated_at at cache time
+  cached_at: string;    // ISO timestamp when cached
+} & VerificationResult;
+
+/**
+ * Cache of verification results keyed by repository full_name
+ */
+export type VerificationCache = Record<string, VerificationCacheEntry>;

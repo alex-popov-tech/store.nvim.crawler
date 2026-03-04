@@ -1,0 +1,18 @@
+name: Cleanup old releases
+on:
+  workflow_run:
+    workflows: ["Repository Crawler"]
+    types: [completed]
+
+jobs:
+  cleanup:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old releases (keep last 7)
+        run: |
+          gh release list --repo ${{ github.repository }} --limit 100 --json tagName,createdAt \
+            | jq -r '.[7:] | .[].tagName' \
+            | xargs -I {} gh release delete {} --repo ${{ github.repository }} --yes --cleanup-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUBB_TOKEN }}

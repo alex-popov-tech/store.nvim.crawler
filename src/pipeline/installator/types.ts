@@ -62,6 +62,7 @@ export type FormattedChunk = {
  */
 export type InstallationCacheEntry = {
   updated_at: string;
+  cached_at: string;
   source: "default" | "lazy.nvim" | "packer.nvim" | "vim-plug";
   lazy: string;
   vimpack: string;

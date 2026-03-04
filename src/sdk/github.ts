@@ -43,30 +43,6 @@ type GithubSearchRepositories = {
   items: GithubRepository[];
 };
 
-type GistUpdatePayload = {
-  files: {
-    [filename: string]: {
-      content: string;
-    };
-  };
-};
-
-type GistFile = {
-  filename: string;
-  type: string;
-  language: string;
-  raw_url: string;
-  size: number;
-  truncated: boolean;
-  content: string;
-};
-
-type GistResponse = {
-  id: string;
-  files: {
-    [filename: string]: GistFile;
-  };
-};
 
 const logger = createLogger({ context: "github-client" });
 
@@ -83,10 +59,6 @@ const client = axios.create({
 const rateLimitClient = {
   get<T = any>(url: string, config?: any): Promise<any> {
     return rateLimitClient.request({ method: 'GET', url, ...config });
-  },
-
-  patch<T = any>(url: string, data?: any, config?: any): Promise<any> {
-    return rateLimitClient.request({ method: 'PATCH', url, data, ...config });
   },
 
   async request(config: any): Promise<any> {
@@ -325,57 +297,25 @@ export async function getRepositoryTree(
   }
 }
 
-export async function getGist(gistId: string): Promise<{ data: GistResponse } | { error: any }> {
-  logger.info(`Starting: gist ${gistId} fetch`);
-  const response = await rateLimitClient.get<GistResponse>(`/gists/${gistId}`, { validateStatus: () => true });
-
-  if (response.status >= 200 && response.status < 300) {
-    logger.info(`Fetched gist ${gistId}`);
-    return { data: response.data };
-  }
-
-  logger.error(`Failed to fetch gist ${gistId}: HTTP ${response.status}`);
-  if (response.status === 404) {
-    logger.error(`Gist ${gistId} not found (404)`);
-  } else if (response.status === 403) {
-    logger.error(`Access forbidden for gist ${gistId} (403) - check token permissions`);
-  }
-
-  return { error: `HTTP ${response.status}: ${response.statusText}` };
-}
-
-export async function getRawGistContent(rawUrl: string): Promise<{ content: string } | { error: any }> {
-  logger.info(`Starting: raw gist fetch from ${rawUrl}`);
-  const response = await axios.get(rawUrl, {
+export async function fetchPublicContent(url: string): Promise<{ content: string } | { error: any }> {
+  logger.info(`Starting: public content fetch from ${url}`);
+  const response = await axios.get(url, {
     validateStatus: () => true,
     timeout: 30000,
-    responseType: 'text'
+    responseType: 'text',
+    maxRedirects: 5,
   });
 
+  if (response.status === 404) {
+    logger.warn(`Not found (404): ${url}`);
+    return { content: "" };
+  }
+
   if (response.status >= 200 && response.status < 300) {
-    logger.info(`Fetched raw gist content, size: ${response.data.length} bytes`);
+    logger.info(`Fetched public content, size: ${response.data.length} bytes`);
     return { content: response.data };
   }
 
-  logger.error(`Failed to fetch raw gist: HTTP ${response.status}`);
-  return { error: `HTTP ${response.status}: ${response.statusText}` };
-}
-
-export async function updateGist(gistId: string, payload: GistUpdatePayload) {
-  logger.info(`Starting: gist ${gistId} update`);
-  const response = await rateLimitClient.patch(`/gists/${gistId}`, payload, { validateStatus: () => true });
-
-  if (response.status >= 200 && response.status < 300) {
-    logger.info(`Updated gist ${gistId}`);
-    return { error: null };
-  }
-
-  logger.error(`Failed to update gist ${gistId}: HTTP ${response.status}`);
-  if (response.status === 404) {
-    logger.error(`Gist ${gistId} not found (404)`);
-  } else if (response.status === 403) {
-    logger.error(`Access forbidden for gist ${gistId} (403) - check token permissions`);
-  }
-
+  logger.error(`Failed to fetch public content: HTTP ${response.status}`);
   return { error: `HTTP ${response.status}: ${response.statusText}` };
 }

@@ -6,9 +6,8 @@ import { crawl as crawlGitlabSearch } from "~/pipeline/crawler/gitlab-search";
 import { normalizeRepository } from "./normalizator";
 import { verify } from "./verificator";
 import { generateInstallations as generateInstallationsForRepos } from "./installator";
-import { updateGist, type GithubRepository } from "~/sdk/github";
+import { type GithubRepository } from "~/sdk/github";
 import { GitlabRepository } from "~/sdk/gitlab";
-import { config } from "~/config";
 import { postProcessDatabase } from "./post-processor";
 import type { Repository } from "./types";
 
@@ -26,9 +25,8 @@ export async function runPipeline() {
   const repositoriesWithInstallations =
     await generateInstallations(verifiedRepositories);
 
-  const minified = postProcessDatabase(repositoriesWithInstallations);
+  postProcessDatabase(repositoriesWithInstallations);
 
-  await pushDatabases(minified);
   logger.info("🎉 v2 Pipeline completed successfully!");
   logger.info(
     `📈 Final Result: ${repositoriesWithInstallations.size} verified plugin repositories`,
@@ -116,49 +114,3 @@ async function generateInstallations(repositories: Map<string, Repository>) {
   return result;
 }
 
-async function pushDatabases(args: {
-  jsonDatabaseMinified: string;
-  jsonVimpackDatabaseMinified: string;
-  jsonLazyDatabaseMinified: string;
-}) {
-  const start = Date.now();
-
-  const [mainResult, vimpackResult, lazyResult] = await Promise.all([
-    updateGist(config.pipeline.output.minifiedDbGistId, {
-      files: {
-        [config.pipeline.output.dbGistFilename]: {
-          content: args.jsonDatabaseMinified,
-        },
-      },
-    }),
-    updateGist(config.pipeline.output.vimpackDbGistId, {
-      files: {
-        [config.pipeline.output.vimpackGistFilename]: {
-          content: args.jsonVimpackDatabaseMinified,
-        },
-      },
-    }),
-    updateGist(config.pipeline.output.lazyDbGistId, {
-      files: {
-        [config.pipeline.output.lazyGistFilename]: {
-          content: args.jsonLazyDatabaseMinified,
-        },
-      },
-    }),
-  ]);
-
-  if (mainResult.error) {
-    throw new Error(`Failed to update main database gist: ${mainResult.error}`);
-  }
-  if (vimpackResult.error) {
-    throw new Error(`Failed to update vim.pack gist: ${vimpackResult.error}`);
-  }
-  if (lazyResult.error) {
-    throw new Error(`Failed to update lazy.nvim gist: ${lazyResult.error}`);
-  }
-
-  const time = Date.now() - start;
-  logger.info(
-    `✅ All 3 databases uploaded to production in ${(time / 1000).toFixed(2)}s`,
-  );
-}

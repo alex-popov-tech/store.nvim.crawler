@@ -7,8 +7,7 @@ import { config } from "~/config";
 import { createLogger } from "~/logger";
 import {
   getRepositoryReadme as getGithubRepositoryReadme,
-  updateGist,
-  getRawGistContent,
+  fetchPublicContent,
 } from "~/sdk/github";
 import { getRepositoryReadme as getGitlabRepositoryReadme } from "~/sdk/gitlab";
 import { FormattedChunk, InstallationCache, InstallationDebug } from "./types";
@@ -20,13 +19,12 @@ import { generateVimPackConfig } from "./migrator/vim-pack";
 const logger = createLogger({ context: "installator" });
 
 export async function pullCache(): Promise<InstallationCache> {
-  const rawResult = await getRawGistContent(
-    config.pipeline.installator.cacheGistRawUrl,
-  );
+  const cacheUrl = `${config.pipeline.output.releaseBaseUrl}/${config.pipeline.installator.cacheFilename}`;
+  logger.info(`Pulling installation cache from ${cacheUrl}`);
+  const rawResult = await fetchPublicContent(cacheUrl);
   if ("error" in rawResult) {
-    throw new Error(
-      `Failed to fetch installation cache from raw URL: ${rawResult.error}`,
-    );
+    logger.warn(`Failed to fetch installation cache: ${rawResult.error}, starting with empty cache`);
+    return new Map();
   }
 
   if (!rawResult.content || rawResult.content.trim() === "") {
@@ -40,28 +38,11 @@ export async function pullCache(): Promise<InstallationCache> {
   return new Map(Object.entries(cacheObject));
 }
 
-export async function updateCache(cache: InstallationCache) {
+export function updateCache(cache: InstallationCache) {
   const cacheContent = JSON.stringify(Object.fromEntries(cache), null, 2);
 
-  logger.info("Pushing minimal installation cache to gist");
-  const updateResult = await updateGist(
-    config.pipeline.installator.cacheGistId,
-    {
-      files: {
-        "installation_cache.json": {
-          content: cacheContent,
-        },
-      },
-    },
-  );
-
-  if (updateResult.error) {
-    throw new Error(
-      `Failed to update installation cache gist: ${updateResult.error}`,
-    );
-  }
-
-  logger.info("Successfully pushed minimal installation cache to gist");
+  writeFileSync(config.pipeline.installator.output.installationCache, cacheContent);
+  logger.info(`Updated installation cache file: ${config.pipeline.installator.output.installationCache}`);
 }
 
 export function isCacheHasFreshRecord(
@@ -69,15 +50,24 @@ export function isCacheHasFreshRecord(
   repository: Repository,
 ): boolean {
   const cached = cache.get(repository.full_name);
-  if (!cached) {
-    return false;
-  }
+  if (!cached) return false;
 
   const repoUpdated = new Date(repository.updated_at);
   const cachedUpdated = new Date(cached.updated_at);
 
-  // Cache is valid if repository hasn't been updated since caching
-  return repoUpdated <= cachedUpdated;
+  // Repo not updated since last cache — nothing changed
+  if (repoUpdated <= cachedUpdated) return true;
+
+  // Repo was updated — check if cache is still within TTL
+  if (cached.cached_at) {
+    const ageInDays =
+      (Date.now() - new Date(cached.cached_at).getTime()) /
+      (24 * 60 * 60 * 1000);
+    return ageInDays < config.pipeline.installator.cacheLifetimeInDays;
+  }
+
+  // No cached_at (legacy entry) — reprocess to stamp it
+  return false;
 }
 
 export async function getRepositoryReadme(
@@ -95,11 +85,11 @@ export function writeDebugOutput(debugEntries: InstallationDebug) {
   const debugArray = Array.from(debugEntries.values());
 
   writeFileSync(
-    config.pipeline.installator.output.install,
+    config.pipeline.installator.output.debug,
     JSON.stringify(debugArray, null, 2),
   );
   logger.info(
-    `Written ${debugEntries.size} debug entries to ${config.pipeline.installator.output.install}`,
+    `Written ${debugEntries.size} debug entries to ${config.pipeline.installator.output.debug}`,
   );
 }
 

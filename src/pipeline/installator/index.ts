@@ -67,6 +67,7 @@ export async function generateInstallations(
     cache.set(repository.full_name, {
       ...repository.install,
       updated_at: repository.updated_at,
+      cached_at: new Date().toISOString(),
     });
     debugEntries.set(repository.full_name, {
       source: "processed",
@@ -78,7 +79,7 @@ export async function generateInstallations(
     });
   }
 
-  await updateCache(cache);
+  updateCache(cache);
   const cacheHits = repositories.size - reposToProcess.length;
 
   logger.info(
