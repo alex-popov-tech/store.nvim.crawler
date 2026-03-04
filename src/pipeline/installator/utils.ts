@@ -7,9 +7,13 @@ import { config } from "~/config";
 import { createLogger } from "~/logger";
 import {
   getRepositoryReadme as getGithubRepositoryReadme,
+  getRepositoryDocFile as getGithubRepositoryDocFile,
   fetchPublicContent,
 } from "~/sdk/github";
-import { getRepositoryReadme as getGitlabRepositoryReadme } from "~/sdk/gitlab";
+import {
+  getRepositoryReadme as getGitlabRepositoryReadme,
+  getRepositoryDocFile as getGitlabRepositoryDocFile,
+} from "~/sdk/gitlab";
 import { FormattedChunk, InstallationCache, InstallationDebug } from "./types";
 import { Repository, RepositoryWithInstallationInfo } from "../types";
 import { writeFileSync } from "fs";
@@ -80,6 +84,17 @@ export async function getRepositoryReadme(
       );
 }
 
+export async function getRepositoryDoc(
+  repository: Repository,
+): Promise<{ docPath: string } | { error: string }> {
+  return repository.source === "github"
+    ? await getGithubRepositoryDocFile(repository)
+    : await getGitlabRepositoryDocFile(
+        repository.full_name,
+        repository.branch,
+      );
+}
+
 export function writeDebugOutput(debugEntries: InstallationDebug) {
   // Convert Map to array of values for JSON serialization
   const debugArray = Array.from(debugEntries.values());
@@ -113,6 +128,12 @@ export async function processSingleRepository(repository: Repository): Promise<{
     default: { lazy: defaultLazy, vimpack: defaultVimpack },
   };
 
+  // Try to get doc file
+  const docResult = await getRepositoryDoc(repository);
+  if (!("error" in docResult)) {
+    defaultResult.repository.doc = docResult.docPath;
+  }
+
   // Try to get README
   const readmeResult = await getRepositoryReadme(repository);
   // No README found - use default config
@@ -139,6 +160,7 @@ export async function processSingleRepository(repository: Repository): Promise<{
     repository: {
       ...repository,
       readme: readmeResult.readmePath,
+      doc: defaultResult.repository.doc,
       install: install!,
     },
     chunks,

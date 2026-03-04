@@ -113,4 +113,3 @@ async function generateInstallations(repositories: Map<string, Repository>) {
   );
   return result;
 }
-

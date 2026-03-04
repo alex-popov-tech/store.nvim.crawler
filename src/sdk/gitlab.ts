@@ -167,6 +167,40 @@ export async function getRepositoryReadme(
   return { error: errorMessage };
 }
 
+export async function getRepositoryDocFile(
+  projectId: string | number,
+  branch: string,
+): Promise<{ docPath: string } | { error: string }> {
+  logger.info(`Starting: doc file lookup for GitLab project ${projectId}`);
+
+  const response = await client.get<GitlabTreeItem[]>(
+    `/projects/${encodeURIComponent(projectId)}/repository/tree`,
+    { params: { path: "doc", ref: branch, per_page: 100 } },
+  );
+
+  if (response.status !== 200) {
+    return { error: `Failed to list doc/ for GitLab project ${projectId}: HTTP ${response.status}` };
+  }
+
+  const items = response.data;
+  if (!Array.isArray(items)) {
+    return { error: `Unexpected response for doc listing of GitLab project ${projectId}` };
+  }
+
+  const txtFiles = items
+    .filter((item) => item.type === "blob" && item.name.endsWith(".txt"))
+    .map((item) => item.name)
+    .sort();
+
+  if (txtFiles.length === 0) {
+    return { error: `No .txt files in doc/ for GitLab project ${projectId}` };
+  }
+
+  const docPath = `${branch}/doc/${txtFiles[0]}`;
+  logger.info(`Found doc file for GitLab project ${projectId}: ${docPath}`);
+  return { docPath };
+}
+
 export async function searchRepositories(
   page: number,
   perPage: number = 100,

@@ -297,6 +297,40 @@ export async function getRepositoryTree(
   }
 }
 
+export async function getRepositoryDocFile(
+  repository: Repository,
+): Promise<{ docPath: string } | { error: string }> {
+  const { full_name, branch } = repository;
+  logger.info(`Starting: doc file lookup for ${full_name}`);
+
+  try {
+    const response = await rateLimitClient.get(
+      `/repos/${full_name}/contents/doc`,
+      { params: { ref: branch } },
+    );
+
+    const items: { name: string; type: string }[] = response.data;
+    if (!Array.isArray(items)) {
+      return { error: `Unexpected response for doc listing of ${full_name}` };
+    }
+
+    const txtFiles = items
+      .filter((item) => item.type === "file" && item.name.endsWith(".txt"))
+      .map((item) => item.name)
+      .sort();
+
+    if (txtFiles.length === 0) {
+      return { error: `No .txt files in doc/ for ${full_name}` };
+    }
+
+    const docPath = `${branch}/doc/${txtFiles[0]}`;
+    logger.info(`Found doc file for ${full_name}: ${docPath}`);
+    return { docPath };
+  } catch {
+    return { error: `Failed to list doc/ for ${full_name}` };
+  }
+}
+
 export async function fetchPublicContent(url: string): Promise<{ content: string } | { error: any }> {
   logger.info(`Starting: public content fetch from ${url}`);
   const response = await axios.get(url, {
