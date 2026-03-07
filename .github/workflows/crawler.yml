@@ -40,6 +40,7 @@ jobs:
             output/vimpack_db_minified.json#vim.pack.json \
             output/verificator_cache.json#verification_cache.json \
             output/installation_cache.json#installation_cache.json \
+            output/star_history.json#star_history.json \
             --title "Nightly $TAG" \
             --latest
         env:

@@ -102,6 +102,12 @@ export const config = {
       // result data should not have those tags, as they are not useful
       tagsToRemove: ["neovim", "nvim", "vim", "lua", "plugin"],
     },
+    enricher: {
+      cacheFilename: "star_history.json",
+      output: {
+        starHistory: "output/star_history.json",
+      },
+    },
     verificator: {
       cache: true,
       cacheLifetimeInDays: 30,

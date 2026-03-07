@@ -4,7 +4,9 @@
   "description": "Repositories crawler for store.nvim",
   "scripts": {
     "crawling": "bash -c 'set -o pipefail && tsx cmd/pipeline.ts | tee output/log'",
-    "compile": "tsc --noEmit"
+    "compile": "tsc --noEmit",
+    "bootstrap-stars:fetch": "tsx cmd/bootstrap-star-history.ts fetch",
+    "bootstrap-stars:process": "tsx cmd/bootstrap-star-history.ts process"
   },
   "repository": {
     "type": "git",
@@ -29,6 +31,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
     "@types/dotenv": "^6.1.1",
     "@types/luaparse": "^0.2.12",
     "asciidoctor": "^3.0.4",

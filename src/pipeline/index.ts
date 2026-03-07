@@ -4,6 +4,7 @@ import { crawl as crawlAwesomeVim } from "~/pipeline/crawler/awesome-vim";
 import { crawl as crawlGithubSearch } from "~/pipeline/crawler/github-search";
 import { crawl as crawlGitlabSearch } from "~/pipeline/crawler/gitlab-search";
 import { normalizeRepository } from "./normalizator";
+import { enrich, type EnrichedRepository } from "./enricher";
 import { verify } from "./verificator";
 import { generateInstallations as generateInstallationsForRepos } from "./installator";
 import { type GithubRepository } from "~/sdk/github";
@@ -18,7 +19,9 @@ export async function runPipeline() {
 
   const repos = await crawlAndDedupeRepositories();
 
-  const normalizedRepositories = normalizeRepositories(repos);
+  const enrichedRepos = await enrichRepositories(repos);
+
+  const normalizedRepositories = normalizeRepositories(enrichedRepos);
 
   const verifiedRepositories = await verifyRepositories(normalizedRepositories);
 
@@ -82,8 +85,20 @@ async function crawlAndDedupeRepositories(): Promise<
   return mergedRepositories;
 }
 
-function normalizeRepositories(
+async function enrichRepositories(
   repositories: Map<string, GithubRepository | GitlabRepository>,
+): Promise<Map<string, EnrichedRepository>> {
+  const start = Date.now();
+  const enriched = await enrich(repositories);
+  const time = Date.now() - start;
+  logger.info(
+    `✅ Enriched ${enriched.size} repositories with star history in ${(time / 1000).toFixed(2)}s`,
+  );
+  return enriched;
+}
+
+function normalizeRepositories(
+  repositories: Map<string, EnrichedRepository>,
 ) {
   const normalizedRepositories = new Map<string, Repository>();
   for (const [fullName, repo] of repositories) {

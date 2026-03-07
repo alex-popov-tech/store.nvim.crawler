@@ -1,5 +1,6 @@
 import type { GithubRepository } from "~/sdk/github";
 import type { GitlabRepository } from "~/sdk/gitlab";
+import type { EnrichedRepository } from "../enricher";
 import type { Repository } from "../types";
 import { config } from "~/config";
 
@@ -90,7 +91,7 @@ function filterTopicsToTags(topics: string[]): string[] {
 /**
  * Normalizes a GitHub repository to our standardized Repository type
  */
-function normalizeGithubRepository(githubRepo: GithubRepository): Repository {
+function normalizeGithubRepository(githubRepo: GithubRepository & { stars_weekly: number; stars_monthly: number }): Repository {
   const [author, name] = githubRepo.full_name.split("/");
 
   return {
@@ -101,7 +102,11 @@ function normalizeGithubRepository(githubRepo: GithubRepository): Repository {
     url: githubRepo.html_url,
     description: (githubRepo.description || "").replace(/~/g, ""),
     tags: filterTopicsToTags(githubRepo.topics),
-    stars: githubRepo.stargazers_count,
+    stars: {
+      curr: githubRepo.stargazers_count,
+      weekly: githubRepo.stars_weekly,
+      monthly: githubRepo.stars_monthly,
+    },
     issues: githubRepo.open_issues_count,
     created_at: githubRepo.created_at,
     updated_at: githubRepo.pushed_at,
@@ -119,7 +124,7 @@ function normalizeGithubRepository(githubRepo: GithubRepository): Repository {
 /**
  * Normalizes a GitLab repository to our standardized Repository type
  */
-function normalizeGitlabRepository(gitlabRepo: GitlabRepository): Repository {
+function normalizeGitlabRepository(gitlabRepo: GitlabRepository & { stars_weekly: number; stars_monthly: number }): Repository {
   const [author, name] = gitlabRepo.path_with_namespace.split("/");
 
   return {
@@ -130,7 +135,11 @@ function normalizeGitlabRepository(gitlabRepo: GitlabRepository): Repository {
     url: gitlabRepo.web_url,
     description: (gitlabRepo.description || "").replace(/~/g, ""),
     tags: filterTopicsToTags(gitlabRepo.topics),
-    stars: gitlabRepo.star_count,
+    stars: {
+      curr: gitlabRepo.star_count,
+      weekly: gitlabRepo.stars_weekly,
+      monthly: gitlabRepo.stars_monthly,
+    },
     issues: gitlabRepo.open_issues_count,
     created_at: gitlabRepo.created_at,
     updated_at: gitlabRepo.last_activity_at,
@@ -149,7 +158,7 @@ function normalizeGitlabRepository(gitlabRepo: GitlabRepository): Repository {
  * Normalizes a repository from any platform to our standardized Repository type
  */
 export function normalizeRepository(
-  repo: GithubRepository | GitlabRepository,
+  repo: EnrichedRepository,
 ): Repository {
   return "web_url" in repo
     ? normalizeGitlabRepository(repo)

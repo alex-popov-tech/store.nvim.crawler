@@ -9,7 +9,11 @@ export type Repository = {
   url: string;
   description: string;
   tags: string[];
-  stars: number;
+  stars: {
+    curr: number;
+    weekly: number;
+    monthly: number;
+  };
   issues: number;
   created_at: string;
   updated_at: string;
