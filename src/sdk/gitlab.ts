@@ -170,7 +170,7 @@ export async function getRepositoryReadme(
 export async function getRepositoryDocFile(
   projectId: string | number,
   branch: string,
-): Promise<{ docPath: string } | { error: string }> {
+): Promise<{ docPaths: string[] } | { error: string }> {
   logger.info(`Starting: doc file lookup for GitLab project ${projectId}`);
 
   const response = await client.get<GitlabTreeItem[]>(
@@ -196,9 +196,9 @@ export async function getRepositoryDocFile(
     return { error: `No .txt files in doc/ for GitLab project ${projectId}` };
   }
 
-  const docPath = `${branch}/doc/${txtFiles[0]}`;
-  logger.info(`Found doc file for GitLab project ${projectId}: ${docPath}`);
-  return { docPath };
+  const docPaths = txtFiles.map(f => `${branch}/doc/${f}`);
+  logger.info(`Found ${docPaths.length} doc file(s) for GitLab project ${projectId}: ${docPaths.join(", ")}`);
+  return { docPaths };
 }
 
 export async function searchRepositories(

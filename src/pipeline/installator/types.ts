@@ -67,7 +67,7 @@ export type InstallationCacheEntry = {
   lazy: string;
   vimpack: string;
   readme?: string;
-  doc?: string;
+  doc?: string[];
 };
 export type InstallationCache = Map<string, InstallationCacheEntry>;
 

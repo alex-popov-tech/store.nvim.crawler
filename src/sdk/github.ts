@@ -299,7 +299,7 @@ export async function getRepositoryTree(
 
 export async function getRepositoryDocFile(
   repository: Repository,
-): Promise<{ docPath: string } | { error: string }> {
+): Promise<{ docPaths: string[] } | { error: string }> {
   const { full_name, branch } = repository;
   logger.info(`Starting: doc file lookup for ${full_name}`);
 
@@ -323,9 +323,9 @@ export async function getRepositoryDocFile(
       return { error: `No .txt files in doc/ for ${full_name}` };
     }
 
-    const docPath = `${branch}/doc/${txtFiles[0]}`;
-    logger.info(`Found doc file for ${full_name}: ${docPath}`);
-    return { docPath };
+    const docPaths = txtFiles.map(f => `${branch}/doc/${f}`);
+    logger.info(`Found ${docPaths.length} doc file(s) for ${full_name}: ${docPaths.join(", ")}`);
+    return { docPaths };
   } catch {
     return { error: `Failed to list doc/ for ${full_name}` };
   }

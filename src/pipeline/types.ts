@@ -30,8 +30,8 @@ export type Repository = {
   };
   /** README file path with branch (e.g., "main/README.md") */
   readme?: string;
-  /** Doc help file path with branch (e.g., "main/doc/telescope.txt") */
-  doc?: string;
+  /** Doc help file paths with branch (e.g., ["main/doc/telescope.txt"]) */
+  doc?: string[];
 };
 
 export type RepositoryWithInstallationInfo = Repository & {

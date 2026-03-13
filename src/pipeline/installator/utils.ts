@@ -86,7 +86,7 @@ export async function getRepositoryReadme(
 
 export async function getRepositoryDoc(
   repository: Repository,
-): Promise<{ docPath: string } | { error: string }> {
+): Promise<{ docPaths: string[] } | { error: string }> {
   return repository.source === "github"
     ? await getGithubRepositoryDocFile(repository)
     : await getGitlabRepositoryDocFile(
@@ -131,7 +131,7 @@ export async function processSingleRepository(repository: Repository): Promise<{
   // Try to get doc file
   const docResult = await getRepositoryDoc(repository);
   if (!("error" in docResult)) {
-    defaultResult.repository.doc = docResult.docPath;
+    defaultResult.repository.doc = docResult.docPaths;
   }
 
   // Try to get README
