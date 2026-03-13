@@ -66,6 +66,8 @@ export type InstallationCacheEntry = {
   source: "default" | "lazy.nvim" | "packer.nvim" | "vim-plug";
   lazy: string;
   vimpack: string;
+  readme?: string;
+  doc?: string;
 };
 export type InstallationCache = Map<string, InstallationCacheEntry>;
 

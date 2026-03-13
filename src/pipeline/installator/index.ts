@@ -41,6 +41,8 @@ export async function generateInstallations(
     const cached = cache.get(repo.full_name)!;
     results.set(fullName, {
       ...repo,
+      readme: cached.readme,
+      doc: cached.doc,
       install: {
         source: cached.source,
         lazy: cached.lazy,
@@ -68,6 +70,8 @@ export async function generateInstallations(
       ...repository.install,
       updated_at: repository.updated_at,
       cached_at: new Date().toISOString(),
+      readme: repository.readme,
+      doc: repository.doc,
     });
     debugEntries.set(repository.full_name, {
       source: "processed",
