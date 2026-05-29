@@ -23,7 +23,7 @@ export type GitlabRepository = {
   updated_at: string | null;
   star_count: number;
   forks_count: number;
-  open_issues_count: number;
+  open_issues_count?: number; // Omitted by GitLab when the Issues feature is disabled
   topics: string[];
   archived: boolean;
   readme_url?: string; // Direct URL to README from GitLab

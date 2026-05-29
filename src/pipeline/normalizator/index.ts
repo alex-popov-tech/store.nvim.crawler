@@ -7,14 +7,35 @@ import { config } from "~/config";
 /**
  * Formats number with k/m suffixes (copied from src/processors/repository.ts)
  */
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1).replace(".0", "") + "m";
-  } else if (num >= 1000) {
-    return (num / 1000).toFixed(1).replace(".0", "") + "k";
+function formatNumber(num: number | null | undefined): string {
+  // Guard against missing numeric fields (e.g. GitLab omits open_issues_count
+  // when a project has the Issues feature disabled) so a single repo can't
+  // crash the whole pipeline.
+  const n = typeof num === "number" && Number.isFinite(num) ? num : 0;
+  if (n >= 1000000) {
+    return (n / 1000000).toFixed(1).replace(".0", "") + "m";
+  } else if (n >= 1000) {
+    return (n / 1000).toFixed(1).replace(".0", "") + "k";
   } else {
-    return num.toLocaleString();
+    return n.toLocaleString();
   }
+}
+
+/**
+ * Normalizes a free-text description into a single render-safe line.
+ *
+ * The DB is the source of truth for display, so all trimming happens here:
+ * strip tildes (markview artifacts) and collapse every whitespace run into a
+ * single space. The critical part is newlines — GitHub forbids them in
+ * descriptions, but GitLab allows them, and an embedded "\n" breaks single-line
+ * consumers (e.g. Neovim's nvim_buf_set_lines rejects the whole batch when any
+ * line contains a newline, leaving the list stuck).
+ */
+function normalizeDescription(description: string | null | undefined): string {
+  return (description || "")
+    .replace(/~/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -100,7 +121,7 @@ function normalizeGithubRepository(githubRepo: GithubRepository & { stars_weekly
     author: author || "",
     name: name || "",
     url: githubRepo.html_url,
-    description: (githubRepo.description || "").replace(/~/g, ""),
+    description: normalizeDescription(githubRepo.description),
     tags: filterTopicsToTags(githubRepo.topics),
     stars: {
       curr: githubRepo.stargazers_count,
@@ -133,14 +154,14 @@ function normalizeGitlabRepository(gitlabRepo: GitlabRepository & { stars_weekly
     author: author || "",
     name: name || "",
     url: gitlabRepo.web_url,
-    description: (gitlabRepo.description || "").replace(/~/g, ""),
+    description: normalizeDescription(gitlabRepo.description),
     tags: filterTopicsToTags(gitlabRepo.topics),
     stars: {
       curr: gitlabRepo.star_count,
       weekly: gitlabRepo.stars_weekly,
       monthly: gitlabRepo.stars_monthly,
     },
-    issues: gitlabRepo.open_issues_count,
+    issues: gitlabRepo.open_issues_count ?? 0,
     created_at: gitlabRepo.created_at,
     updated_at: gitlabRepo.last_activity_at,
     branch: gitlabRepo.default_branch,
