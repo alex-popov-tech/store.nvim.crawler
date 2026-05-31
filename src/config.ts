@@ -140,6 +140,9 @@ export const config = {
         (r) => r.full_name.includes("SigmaVimRc"),
         (r) => r.full_name.includes("one.nvim"),
         (r) => r.full_name.includes("nvim-ide"),
+
+        (r) => r.full_name.includes("Izzymaroc1690"), // https://github.com/Izzymaroc1690/tiny-cmdline.nvim malicious fork
+
       ] as ((repoName: { full_name: string }) => boolean)[],
       output: {
         verificationCache: "output/verificator_cache.json",
