@@ -68,7 +68,8 @@ export const config = {
           "topic:neovim-plugin created:2024-07-01..2024-12-31 archived:false", // ~459 repos
           "topic:neovim-plugin created:2025-01-01..2025-06-30 archived:false", // split from 2025
           "topic:neovim-plugin created:2025-07-01..2025-12-31 archived:false", // split from 2025
-          "topic:neovim-plugin created:>=2026-01-01 archived:false", // future repos
+          "topic:neovim-plugin created:2026-01-01..2026-07-31 archived:false", // split from 2026
+          "topic:neovim-plugin created:>=2026-08-01 archived:false", // future repos
         ],
         "neovim-plugins": [
           "topic:neovim-plugins created:2016-01-01..2025-12-31 archived:false", // ~168 repos
